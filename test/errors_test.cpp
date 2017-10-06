@@ -1,5 +1,6 @@
 #include <pp.h>
 #include <string.h>
+#include <tuple>
 
 using namespace pp;
 
@@ -25,6 +26,16 @@ static void test_GetError(errors::Error &e)
     return;
 }
 
+static auto myError = errors::Error("it's my error");
+
+
+static std::tuple<int  , errors::Error > test_return_tuple()
+{
+  return std::make_tuple(-1, myError);
+}
+
+
+
 int main(int argc, char *argv[])
 {
     if (argc != 2){
@@ -38,6 +49,11 @@ int main(int argc, char *argv[])
         printf("the errors is %s\n", e.what());
     }else if (strcmp(argv[1], "eq") == 0){
         printf("%d\n", test_error_eq());
+    }else if (strcmp(argv[1], "return_tuple") == 0){
+      int           n;
+      errors::Error e;
+      std::tie(n, e) = test_return_tuple();
+      printf("%d %s\n", n, e.what());
     }
 
 

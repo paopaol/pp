@@ -41,6 +41,11 @@ set_tests_properties(
     PASS_REGULAR_EXPRESSION "1"
 )
 
+add_test(
+  errors_return_tuple
+  errors_test "return_tuple"
+  )
+
 
 add_test(
     buffer_test_example
