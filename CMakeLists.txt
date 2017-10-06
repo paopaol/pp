@@ -1,11 +1,7 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8e
 
 project(pp)
 
-set(
-    CMAKE_BUILD_TYPE
-    Debug
-)
 
 include_directories(include)
 
@@ -13,6 +9,6 @@ add_subdirectory(src)
 add_subdirectory(test)
 
 add_library(pp)
-target_link_libraries(pp io errors time bytes)
+target_link_libraries(pp io errors time bytes strings fmt)
 
 enable_testing()

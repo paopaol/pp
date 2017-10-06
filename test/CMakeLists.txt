@@ -7,6 +7,9 @@ target_link_libraries(time_test pp)
 add_executable(buffer_test buffer_test.cpp)
 target_link_libraries(buffer_test pp)
 
+add_executable(strings_test strings_test.cpp)
+target_link_libraries(strings_test pp)
+
 enable_testing()
 
 add_test(
@@ -51,6 +54,11 @@ add_test(
     buffer_test_example
     buffer_test
 )
+
+add_test(
+  strings_test
+  strings_test
+  )
 
 # set_tests_properties(
 #     buffer_test_example
