@@ -264,8 +264,7 @@ namespace pp{
 
         void Sleep(Duration d){
             // ::Sleep((DWORD)(d / Millisecond));
-            // sleep(d / Microsecond);
-            sleep(d / Microsecond);
+            sleep(d / Second);
         }
 
         //string DurationString(Duration d){

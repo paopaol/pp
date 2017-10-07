@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 {
     auto now = _time::Now();
     std::cout << now.String() << std::endl;
-    std::cout << now.Add(_time::Hour * 1).String() << std::endl;
+    std::cout << _time::Now().Add(_time::Hour * 1).String() << std::endl;
     auto now2 = now;
 
     if (!now2.Equal(now)){
@@ -16,8 +16,9 @@ int main(int argc, char *argv[])
     }
     auto old = now;
     _time::Sleep(_time::Second * 1);
-
-    if (!_time::Now().After(old)){
+    auto then = _time::Now();
+    std::cout << then.String() << std::endl;
+    if (!then.After(old)){
         return 2;
     }
 
@@ -25,15 +26,18 @@ int main(int argc, char *argv[])
         return 3;
     }
 
-    now = _time::Now();
-    auto later = now.Add(_time::Second * 99);
-    auto d = later.Sub(now);
+
+    auto before = _time::Now();
+    then = before;
+    then.Add(_time::Second * 99);
+    auto d = then.Sub(before);
     if (! (d == _time::Second * 99)){
         return 4;
     }
-    
+
 
 
 
     return 0;
 }
+ 

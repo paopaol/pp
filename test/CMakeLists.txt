@@ -1,38 +1,24 @@
+enable_testing()
 add_executable(errors_test errors_test.cpp)
 target_link_libraries(errors_test pp)
-
-add_executable(time_test time_test.cpp)
-target_link_libraries(time_test pp)
-
-add_executable(buffer_test buffer_test.cpp)
-target_link_libraries(buffer_test pp)
-
-add_executable(strings_test strings_test.cpp)
-target_link_libraries(strings_test pp)
-
-enable_testing()
-
 add_test(
      errors_package_test_new
      errors_test  "new"
 )
 set_tests_properties(
     errors_package_test_new
-    PROPERTIES 
+    PROPERTIES
     PASS_REGULAR_EXPRESSION "new error"
 )
-
-
 add_test(
      errors_package_test_get
      errors_test  "get"
 )
 set_tests_properties(
     errors_package_test_get
-    PROPERTIES 
+    PROPERTIES
     PASS_REGULAR_EXPRESSION "EOF"
 )
-
 add_test(
     errors_package_test_eq
     errors_test "eq"
@@ -50,20 +36,37 @@ add_test(
   )
 
 
+
+
+add_executable(time_test time_test.cpp)
+target_link_libraries(time_test pp)
+add_test(
+  time_test
+  time_test
+  )
+
+
+
+add_executable(buffer_test buffer_test.cpp)
+target_link_libraries(buffer_test pp)
 add_test(
     buffer_test_example
     buffer_test
 )
 
+
+
+add_executable(strings_test strings_test.cpp)
+target_link_libraries(strings_test pp)
 add_test(
   strings_test
   strings_test
   )
 
-# set_tests_properties(
-#     buffer_test_example
-#     PROPERTIES
-#     PASS_REGULAR_EXPRESSION "success"
-# )
 
-
+add_executable(http_test http_test.cpp)
+target_link_libraries(http_test pp)
+add_test(
+  http_test
+  http_test
+  )
