@@ -2,6 +2,12 @@
 #include <iostream>
 #include <string>
 
+#ifdef WIN32
+#include <Windows.h>
+#else
+#include <sys/time.h>
+#endif
+
 using namespace pp;
 
 int main(int argc, char *argv[])
@@ -15,7 +21,11 @@ int main(int argc, char *argv[])
         return 1;
     }
     auto old = now;
-    _time::Sleep(_time::Second * 1);
+#ifdef WIN32
+    Sleep(1000);
+#else
+	sleep(1);
+#endif
     auto then = _time::Now();
     std::cout << then.String() << std::endl;
     if (!then.After(old)){

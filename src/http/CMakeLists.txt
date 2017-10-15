@@ -24,3 +24,10 @@ add_dependencies(
   libcurl_project
   )
 
+
+add_executable(http_test http_test.cpp)
+target_link_libraries(http_test pp)
+add_test(
+  http_test
+  http_test
+  )
