@@ -8,7 +8,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 add_compile_options(-std=c++11)
-enable_testing()
+if(NOT DISABLED_TEST)
+        enable_testing()
+endif()
 include_directories(include)
 
 # auto create libcurl dir in ${PROJECT_BINARY_DIR}

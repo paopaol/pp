@@ -1,7 +1,8 @@
 #ifndef THREAD_LOCAL_STORAGE_H
 #define THREAD_LOCAL_STORAGE_H
 
-extern bool threadPushLoop(void *loop);
-extern bool threadPopLoop();
+extern void loopPushToThread(void *loop);
+extern void loopPopFromThread();
+extern void thread_local_storage_init();
 
 #endif // THREAD_LOCAL_STORAGE_H

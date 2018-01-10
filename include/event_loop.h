@@ -12,7 +12,7 @@ public:
     void Exec();
 private:
     bool inCreateThread();
-    bool threadAlreadyExitLoop();
+    bool threadAlreadyExistLoop();
 
 
 

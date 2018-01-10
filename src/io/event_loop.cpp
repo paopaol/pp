@@ -3,6 +3,7 @@
 #include "thread_local_storage.h"
 
 #include <assert.h>
+#include <iostream>
 
 using namespace std;
 
@@ -12,15 +13,15 @@ EventLoop::EventLoop()
         :m_tid(this_thread::get_id())
         ,m_execing(false)
 {
-    if(threadAlreadyExitLoop()){
-        abort();
-    }
-    threadPushLoop(this);
+    thread_local_storage_init();
+
+    assert(!threadAlreadyExistLoop());
+    loopPushToThread(this);
 }
 
 EventLoop::~EventLoop()
 {
-    threadPopLoop();
+   loopPopFromThread();
 }
 
 bool EventLoop::inCreateThread()
@@ -28,13 +29,12 @@ bool EventLoop::inCreateThread()
     return m_tid == this_thread::get_id();
 }
 
-bool EventLoop::Exec()
+void EventLoop::Exec()
 {
     assert(!m_execing);
-    assert(!inCreateThread());
+    assert(inCreateThread());
     m_execing = true;
 
-    system("pause");
 }
 }
 }

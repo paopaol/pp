@@ -5,28 +5,44 @@
 #include <Windows.h>
 
 #include <assert.h>
+#include <atomic>
+
+using namespace std;
 
 static DWORD index = TLS_OUT_OF_INDEXES;
 
-void threadPushLoop(void *loop)
+void thread_local_storage_init()
 {
-   index =  TlsAlloc();
-   assert(index == TLS_OUT_OF_INDEXES);
+    static atomic_bool inited = false;
 
+    if (inited){
+        return;
+    }
+    inited = true;
+   index =  TlsAlloc();
+   assert(index != TLS_OUT_OF_INDEXES);
+   inited = true;
+}
+
+void loopPushToThread(void *loop)
+{
    TlsSetValue(index, loop);
 }
 
-void threadPopLoop()
+void loopPopFromThread()
 {
-    TlsFree(index);
+    TlsSetValue(index, 0);
 }
 
 
 namespace pp{
 namespace io {
-bool EventLoop::threadAlreadyExitLohop()
+bool EventLoop::threadAlreadyExistLoop()
 {
-    assert(TlsGetValue(index) == 0);
+    if (TlsGetValue(index) == 0){
+       return false;
+    }
+    return true;
 }
 }
 }

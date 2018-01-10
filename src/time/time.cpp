@@ -9,7 +9,7 @@
 #include <string.h>
 
 #if defined( WIN32 )
-#include <time_win.h>
+#include "time_win.h"
 #include <Windows.h>
 #else
 #include <unistd.h>
