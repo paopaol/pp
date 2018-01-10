@@ -115,7 +115,6 @@ namespace pp{
         };
 
         Time Now();
-        void Sleep(Duration d);
 
 	//typedef void (*TimerFunc)(void *, bool);
 

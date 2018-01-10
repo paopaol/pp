@@ -4,13 +4,19 @@
 //
 
 #include <time.h>
-#include <sys/time.h>
-//#include <sys/timerfd.h>
-#include <fcntl.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+
+#if defined( WIN32 )
+#include <time_win.h>
+#include <Windows.h>
+#else
 #include <unistd.h>
+#include <sys/time.h>
+#include <fcntl.h>
+#endif
+
 
 #include <iostream>
 #include <vector>
@@ -76,54 +82,9 @@ namespace pp{
             daysPer4Years    = 365*4 + 1
         };
 
-        // The unsig
-        // Must be 1 mod 400, and times before it will not compute correctly,
-        // but otherwise can be changed at will.
-        // static int64_t absoluteZeroYear = -292277022399;
-
-        // The year of the zero Time.
-        // Assumed by the unixToInternal computation below.
-        //static int internalYear = 1;
-
-        // The year of the zero Unix time.
-        //static const int unixYear = 1970;
-
-        // Offsets to convert between internal and absolute or Unix times.
-        //static int64_t absoluteToInternal  = (absoluteZeroYear - internalYear) * 365.2425 * secondsPerDay;
-        //static int64_t internalToAbsolute  = -absoluteToInternal;
-
-        //static int64_t unixToInternal = (1969*365 + 1969/4 - 1969/100 + 1969/400) * secondsPerDay;
-        //static int64_t internalToUnix = -unixToInternal;
 
 
 
-        // static void gettimeofday(struct timeval *tp) 
-        // {
-        //     uint64_t  intervals;  
-        //     FILETIME  ft;  
-
-        //     GetSystemTimeAsFileTime(&ft);  
-
-        //     /* 
-        //     * A file time is a 64-bit value that represents the number 
-        //     * of 100-nanosecond intervals that have elapsed since 
-        //     * January 1, 1601 12:00 A.M. UTC. 
-        //     * 
-        //     * Between January 1, 1970 (Epoch) and January 1, 1601 there were 
-        //     * 134744 days, 
-        //     * 11644473600 seconds or 
-        //     * 11644473600,000,000,0 100-nanosecond intervals. 
-        //     * 
-        //     * See also MSKB Q167296. 
-        //     */  
-
-        //     intervals = ((uint64_t) ft.dwHighDateTime << 32) | ft.dwLowDateTime;  
-        //     intervals -= 116444736000000000;  
-
-        //     tp->tv_sec = (long) (intervals / 10000000);  
-        //     tp->tv_usec = (long) ((intervals % 10000000) / 10);  
-
-        // }
 
 
 
@@ -137,7 +98,11 @@ namespace pp{
             sec = tv.tv_sec;
             nsec = tv.tv_usec * 1000;
             // localtime(&tm, (time_t *)&sec);
+#ifdef WIN32
+            localtime_s(&tm, &sec );
+#else
             localtime_r(&sec, &tm);
+#endif
         }
 
         bool Time::After(Time u) {
@@ -165,8 +130,11 @@ namespace pp{
             }
             nsec = nano;
 
-            // localtime(&tm, (time_t *)&sec);
+#ifdef WIN32
+            localtime_s(&tm, &sec );
+#else
             localtime_r(&sec, &tm);
+#endif
             return *this;
         }
 
@@ -262,11 +230,10 @@ namespace pp{
             return now;
         }
 
-        void Sleep(Duration d){
-            // ::Sleep((DWORD)(d / Millisecond));
-            // sleep(d / Microsecond);
-            sleep(d / Microsecond);
-        }
+        // void Sleep(Duration d){
+        //     // ::Sleep((DWORD)(d / Millisecond));
+        //     sleep(d / Second);
+        // }
 
         //string DurationString(Duration d){
         //    std::vector<char>   buf;
@@ -301,7 +268,7 @@ namespace pp{
         //            prec = 6;
         //            buf[w] = 'm';
         //        }
-        //        
+        //
 
         //    }else{
 
