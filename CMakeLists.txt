@@ -7,6 +7,7 @@ set(
     Debug
 )
 
+add_compile_options(-std=c++11)
 include_directories(include)
 
 add_subdirectory(src)

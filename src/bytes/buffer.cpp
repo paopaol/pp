@@ -42,7 +42,7 @@ namespace pp{
         {
             assert(n > 0);
 
-            p.clear(); 
+            p.clear();
             n = n > Len() ? Len() : n;
             std::copy(lastRead(), lastRead() + n, std::back_inserter(p));
             hasReaded(n);
