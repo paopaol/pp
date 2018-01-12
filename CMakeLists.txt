@@ -20,5 +20,5 @@ include_directories(${PROJECT_BINARY_DIR}/libcurl/include)
 add_subdirectory(src)
 
 add_library(pp src/pp.cpp)
-target_link_libraries(pp io errors time bytes strings fmt)
+target_link_libraries(pp io errors time bytes strings fmt ws2_32)
 
