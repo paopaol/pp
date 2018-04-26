@@ -1,11 +1,13 @@
-#include <event_loop.h>
+#include <io/event_loop.h>
+#include <fmt/fmt.h>
 
 #include "thread_local_storage.h"
-#include <event.h>
-#include <event_listener.h>
+#include <io/event_fd.h>
+#include <io/event_poller.h>
 #ifdef WIN32
-#include "windows/event_listener_iocp.h"
+#include <windows/event_iocp_poller.h>
 #endif
+#include <system/thread.h>
 
 
 #include <assert.h>
@@ -15,97 +17,127 @@
 using namespace std;
 
 namespace pp {
-namespace io{
-    class MyTestEventListener {
-    public:
-        int Listen(int timeoutms, EventVec &gotEvents) {
-            int ev = Event::EV_NONE;
+    namespace io {
 
-            ev |= Event::EV_READ;
-            m_eventVec[0]->SetActive(ev);
-            gotEvents = m_eventVec;
-            return 0;
+        EventLoop::EventLoop()
+            :m_tid(system::this_thread::get_id())
+            ,m_execing(false)
+            ,eventPoller(new EventPoller)
+            ,exit_(false)
+#ifdef WIN32
+            ,wakeupPipe_(fmt::Sprintf("\\\\.\\pipe\\wakeuppipe%d", m_tid).c_str())
+            ,wakeupEventFd_(new IocpEventFd(this, wakeupPipe_.Fd()))
+        {
+            std::cerr << error.full_message() << std::endl;
+            assert(error.value() == 0);
+            std::shared_ptr<EventIocpPoller> Poller_ = std::make_shared<EventIocpPoller>();
+            
+#endif
+
+            eventPoller->Poll = [Poller_](int timeoutms,
+                EventFdList &gotEventFds, errors::error_code &error) {
+                return  Poller_->Poll(timeoutms, gotEventFds, error);
+            };
+
+            eventPoller->UpdateEventFd = [Poller_](EventFd *event, errors::error_code &error) {
+                Poller_->UpdateEventFd(event, error);
+            };
+            eventPoller->RemoveEventFd = [Poller_](EventFd *event, errors::error_code &error) {
+                Poller_->RemoveEventFd(event, error);
+            };
+#ifdef WIN32
+            IocpEventFd *event = static_cast<IocpEventFd *>(wakeupEventFd_.get());
+            event->EnableWakeUp(error);
+#endif
+
+            thread_local_storage_init();
+            assert(!threadAlreadyExistLoop());
+            loopPushToThread(this);
         }
 
-        void AddEvent(Event *ev) {
-            m_eventVec.push_back(ev);
+        EventLoop::~EventLoop()
+        {
+            loopPopFromThread();
         }
 
-        void RemoveEvent(Event *ev) {
-            //m_eventVec.erase();
+        bool EventLoop::InCreateThread()
+        {
+            return m_tid == system::this_thread::get_id();
         }
 
-    private:
-        EventVec m_eventVec;
-    };
+        void EventLoop::Exec()
+        {
+            assert(!m_execing);
+            assert(InCreateThread());
+            m_execing = true;
+            
 
-
-
-EventLoop::EventLoop()
-        :m_tid(this_thread::get_id())
-        ,m_execing(false)
-        ,m_eventListener(new EventListener)
-{
-    std::shared_ptr<MyTestEventListener> mylistener = 
-        make_shared<MyTestEventListener>();
-    m_eventListener->Listen = std::bind(&MyTestEventListener::Listen, mylistener,
-        placeholders::_1, placeholders::_2);
-    m_eventListener->AddEvent = std::bind(&MyTestEventListener::AddEvent, mylistener,
-        placeholders::_1);
-    m_eventListener->RemoveEvent = std::bind(&MyTestEventListener::RemoveEvent, mylistener,
-        placeholders::_1);
-
-    std::shared_ptr<IocpListener> iocplistener = make_shared<IocpListener>();
-    m_eventListener->Listen = std::bind(&IocpListener::Listen, iocplistener,
-        placeholders::_1, placeholders::_2);
-    m_eventListener->AddEvent = std::bind(&IocpListener::AddEvent, iocplistener,
-        placeholders::_1);
-    m_eventListener->RemoveEvent = std::bind(&IocpListener::RemoveEvent, iocplistener,
-        placeholders::_1);
-
-    thread_local_storage_init();
-
-    assert(!threadAlreadyExistLoop());
-    loopPushToThread(this);
-}
-
-EventLoop::~EventLoop()
-{
-   loopPopFromThread();
-}
-
-bool EventLoop::inCreateThread()
-{
-    return m_tid == this_thread::get_id();
-}
-
-void EventLoop::Exec()
-{
-    assert(!m_execing);
-    assert(inCreateThread());
-    m_execing = true;
-
-    while(1){
-        m_eventListener->Listen(INFINITE, m_activeEvents);
-        for (auto ev = m_activeEvents.begin(); 
-            ev != m_activeEvents.end(); ev++) {
-            (*ev)->HandleEvent(NULL, 0);
+            while (!exit_) {
+                errors::error_code error;
+                eventPoller->Poll(INFINITE, m_activeEvents, error);
+                for (auto ev = m_activeEvents.begin();
+                    ev != m_activeEvents.end(); ev++) {
+                    (*ev)->HandleEvent(NULL, 0);
+                }
+                if (error.value() != 0) {
+                    fprintf(stderr, "%s\n", error.full_message().c_str());
+                }
+            }
         }
+
+
+		void EventLoop::RunInLoop(const Functor &func)
+		{
+			if (InCreateThread()){
+				func();
+			}else{
+				moveToLoopThread(func);
+			}
+		}
+
+		void EventLoop::moveToLoopThread(const Functor &func)
+		{
+			{
+				system::MutexLockGuard _(functorListMutex_);
+				functorList_.push_back(func);
+			}
+
+			if (!InCreateThread()){
+				Wakeup();
+			}
+		}
+
+        void EventLoop::UpdateEventFd(EventFd *event, errors::error_code &error)
+        {
+            assert(event->ItsLoop() == this);
+            eventPoller->UpdateEventFd(event, error);
+        }
+
+		void EventLoop::RemoveEventFd(EventFd *event, errors::error_code &error)
+		{
+			assert(event->ItsLoop() == this);
+			eventPoller->RemoveEventFd(event, error);
+		}
+
+#ifdef WIN32
+        void EventLoop::Wakeup() 
+        {
+           
+
+            HANDLE h = ::CreateFile(wakeupPipe_.Name().c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL,
+                OPEN_EXISTING, 0, NULL);
+      
+            ::CloseHandle(h);
+        }
+#endif
+
+        void EventLoop::Quit()
+        {
+            exit_ = true;
+            if (!InCreateThread()) {
+                Wakeup();
+            }
+        }
+
     }
-}
-
-void EventLoop::UpdateEvent(Event *event)
-{
-    assert(event->ItsLoop() == this);
-    m_eventListener->AddEvent(event);
-}
-
-void EventLoop::InsertEvent(Event *event)
-{
-    assert(event->ItsLoop() == this);
-
-    m_eventListener->AddEvent(event);
-}
-
-}
 }

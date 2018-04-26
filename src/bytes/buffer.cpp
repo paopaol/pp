@@ -1,20 +1,7 @@
-
-#include <pp.h>
-
-#include <vector>
-#include <string>
-#include <iterator>
-#include <algorithm>
-#include <assert.h>
-#include <memory>
+#include <bytes/buffer.h>
 
 namespace pp{
-    namespace bytes{
-        static const auto errorOutOfRange = errors::Error("Buffer out of range");
-
-
-
-
+namespace bytes{
 
         Buffer::Buffer()
         :b(4096),
@@ -23,78 +10,75 @@ namespace pp{
         {
         }
 
-        //Read All
+		//Read All
         size_t Buffer::Read(std::vector<char> &p)
         {
             return ReadBytes(p, Len());
         }
 
-        //Read One Byte
-        char Buffer::ReadByte()
-        {
-            char *ch = lastRead();
-            hasReaded(1);
-            return *ch;
-        }
+		//Read One Byte
+		char Buffer::ReadByte()
+		{
+			char *ch = lastRead();
+			hasReaded(1);
+			return *ch;
+		}
 
-        //Read N Bytes from buffer
+		//Read N Bytes from buffer
         size_t Buffer::ReadBytes(std::vector<char> &p, int n)
         {
-            assert(n > 0);
+            assert(n >= 0);
 
-            p.clear();
+            p.clear(); 
             n = n > Len() ? Len() : n;
             std::copy(lastRead(), lastRead() + n, std::back_inserter(p));
             hasReaded(n);
             return n;
         }
 
-        size_t Buffer::Read(char *buffer, int n)
-        {
-            assert(n > 0);
+		size_t Buffer::Read(char *buffer, int n)
+		{
+			assert(n >= 0);
             n = n > Len() ? Len() : n;
             std::copy(lastRead(), lastRead() + n, buffer);
             hasReaded(n);
             return n;
-        }
+		}
 
-        //write data into buffer
-        size_t Buffer::Write(const char *d, int len)
-        {
+		//write data into buffer
+		size_t Buffer::Write(const char *d, int len)
+		{
             if (leftSpace() < len){
                 growSpace(len);
             }
-            std::copy(d, d + len, beginWrite());
+			std::copy(d, d + len, beginWrite());
             hasWritten(len);
             return len;
-        }
-        size_t Buffer::Write(const std::string &s)
-        {
-            return Write(s.c_str(), s.size());
-        }
+		}
+		size_t Buffer::Write(const std::string &s)
+		{
+			return Write(s.c_str(), s.size());
+		}
 
-        size_t Buffer::Write(const std::vector<char> &p)
-        {
-            return Write(p.data(), p.size());
-        }
+		size_t Buffer::Write(const std::vector<char> &p)
+		{
+			return Write(p.data(), p.size());
+		}
 
-        bool Buffer::UnReadByte(errors::Error &e)
-        {
-           return UnReadBytes(1, e);
-        }
+		
+		void Buffer::UnReadByte(/*error*/)
+		{
+			UnReadBytes(1);
+		}
 
-        bool Buffer::UnReadBytes(int n, errors::Error &e)
-        {
-            auto len = lastRead() - begin();
-            if (len < n){
-                e = errorOutOfRange;
-                return false;
-            }
-            ridx -= n;
-            return false;
-        }
+		void Buffer::UnReadBytes(int n/*,error &e*/)
+		{
+			assert((lastRead() - begin()) >= n);
+			ridx -= n;
+		}
+		
 
-        //return unreaded data size
+		//return unreaded data size
         int Buffer::Len()
         {
             return widx - ridx;
@@ -105,80 +89,142 @@ namespace pp{
             return b.capacity();
         }
 
-        void Buffer::Reset()
-        {
+		void Buffer::Reset()
+		{
             ridx = 0;
             widx = 0;
-        }
+		}
 
-        void Buffer::Optimize()
-        {
-            if (ridx == 0){
-                return;
-            }
-            int len = Len();
-            std::copy(lastRead(), beginWrite(), begin());
-            ridx = 0;
-            widx = ridx + len;
-        }
-        //ReadFrom
-        //WriteTo
+		bool Buffer::PeekAt(std::vector<char> &p, int index, int size)
+		{
+			if (index < 0 || index >= Len()){
+				return false;
+			}
+			if (size <= 0){
+				return false;
+
+			}
+			index = ridx + index;
+			int len = widx - index;
+			if (size > len){
+				return false;
+			}
+
+            p.clear(); 
+            std::copy(b.data() + index, b.data() + index + size, std::back_inserter(p));
+            return true;
+		}
+
+		void Buffer::Optimization()
+		{
+			if (ridx == 0){
+				return;
+			}
+
+			int len = Len();
+			std::copy(begin() + ridx, begin() + widx, begin());
+			ridx = 0;
+			widx = ridx + len;
+		}
+
+		//ReadFrom
+		//WriteTo
+
 
 
         void Buffer::growSpace(int len)
         {
             b.resize(widx + len);
+            Optimization();
         }
 
 
-        int Buffer::leftSpace()
-        {
-            return b.capacity() - widx;
-        }
+		int Buffer::leftSpace()
+		{
+			return b.capacity() - widx;
+		}
 
-        void Buffer::hasWritten(int len)
-        {
-            widx += len;
-        }
-        void Buffer::hasReaded(int len)
-        {
-            ridx += len;
-        }
+		void Buffer::hasWritten(int len)
+		{
+			widx += len;
+		}
+		void Buffer::hasReaded(int len)
+		{
+			ridx += len;
+		}
 
-        char *Buffer::beginWrite()
-        {
-            return begin() + widx;
-        }
+		char *Buffer::beginWrite()
+		{
+			return begin() + widx;
+		}
 
         const char *Buffer::beginWrite()const
         {
             return begin() + widx;
         }
 
-        char *Buffer::lastRead()
-        {
-            return begin() + ridx;
-        }
+		char *Buffer::lastRead()
+		{
+			return begin() + ridx;
+		}
 
-        const char *Buffer::beginRead() const
-        {
-            return begin() + ridx;
-        }
+		const char *Buffer::beginRead() const
+		{
+			return begin() + ridx;
+		}
 
-        char *Buffer::begin()
-        {
-            return &*b.begin();
-        }
+		char *Buffer::begin()
+		{
+			return &*b.begin();
+		}
 
         const char *Buffer::begin()const
         {
             return &*b.begin();
         }
 
-        BufferRef NewBuffer()
-        {
-            BufferRef b = std::make_shared<Buffer>();
-            return b;
-        }
-    }
+
+	//BufferRef NewBuffer();
+  //  {
+		//BufferRef b = std::make_shared<Buffer>();
+		//return b;
+  //  }
 }
+}
+
+#if 0
+int main(int argc ,char *argv[])
+{
+	auto buffer = bytes::NewBuffer();
+	std::vector<char> data(10000, 1);
+
+	buffer->Write("12345");
+	buffer->Write("12345");
+	buffer->Write("12345");
+	buffer->Write("12345");
+	buffer->Write(data);
+
+	printf("cap:%d\n len:%d\n", buffer->Cap(), buffer->Len());
+	buffer->PeekAt(data, 3, 10);
+
+	printf("cap:%d\n len:%d\n", buffer->Cap(), buffer->Len());
+	buffer->ReadByte();
+	buffer->PeekAt(data, 3, 10);
+	buffer->ReadByte();
+	buffer->ReadByte();
+	buffer->ReadByte();
+	buffer->PeekAt(data, 3, 10);
+	buffer->Optimization();
+	buffer->PeekAt(data, 3, 10);
+	buffer->ReadBytes(data, 22);
+	buffer->UnReadByte();
+	buffer->UnReadByte();
+	buffer->UnReadByte();
+	buffer->UnReadByte();
+	buffer->UnReadBytes(22);
+	printf("cap:%d\n len:%d\n", buffer->Cap(), buffer->Len());
+
+    return 0;
+}
+
+#endif

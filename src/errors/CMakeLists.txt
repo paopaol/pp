@@ -1,4 +1,10 @@
-add_library(errors errors.cpp)
+set(src 
+	errors.cpp
+	)
+if (IS_WIN)
+	set(src ${src} errors_windows.cpp)
+endif()
+add_library(errors ${src} )
 
 add_executable(errors_test errors_test.cpp)
 target_link_libraries(errors_test pp)

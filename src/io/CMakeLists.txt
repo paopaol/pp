@@ -16,6 +16,8 @@ if (IS_WIN)
 endif()
 
 include_directories(.)
+include_directories(${CMAKE_SOURCE_DIR}/src/net/windows)
+include_directories(${CMAKE_SOURCE_DIR}/src/io/windows)
 add_library(io ${src_files})
 
 if(NOT DISABLED_TEST)

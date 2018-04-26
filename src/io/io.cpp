@@ -1,9 +1,9 @@
-#include <pp.h>
 
 using namespace std;
 
 namespace pp{
     namespace io{
-        const errors::Error Eof = errors::Error("EOF"); 
+        //const errors::Error Eof = errors::Error("EOF"); 
+        int a = 0;
     }
 }

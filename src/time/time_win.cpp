@@ -1,5 +1,4 @@
-#include <Windows.h>
-#include <stdint.h>
+#include "time_win.h"
 
 void gettimeofday(struct timeval *tp, void * unused)
 {

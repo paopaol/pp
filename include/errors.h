@@ -6,35 +6,28 @@
 
 namespace pp{
     namespace errors{
+		class Error;
+
+		extern const Error nil;
+
+         Error  New(const std::string &s);
+		 Error New(int code);
         class Error{
         public:
-            Error(){}
+			Error();
 
-            Error(const std::string &s)
-                :e(std::make_shared<std::string>(s))
-            {
-            }
-            const char *what() const
-            {
-                return e->c_str();
-            }
-
-            bool operator == (const Error &e1)
-            {
-                return e1.e == e;
-            }
+			Error(const std::string &s);
+			const char *what() const;
+			bool operator == (const Error &e1);
+			bool operator != (const Error &e1);
 
             friend Error New(const std::string &s);
 
         private:
             typedef std::shared_ptr<std::string> String;
-
-
             mutable String    e;
         };
 
-
-        Error New(const std::string &s);
     }
 }
 

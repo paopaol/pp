@@ -2,15 +2,19 @@
 //
 // Created by jz on 17-2-26.
 //
+#include <time/_time.h>
+
 
 #include <time.h>
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
 
-#if defined( WIN32 )
+#if defined(WIN32)
 #include "time_win.h"
-#include <Windows.h>
+#if _MSC_VER
+#define snprintf _snprintf
+#endif
 #else
 #include <unistd.h>
 #include <sys/time.h>
@@ -21,7 +25,7 @@
 #include <iostream>
 #include <vector>
 
-#include <_time.h>
+
 
 namespace pp{
     namespace _time{
@@ -204,14 +208,14 @@ namespace pp{
             return string(buf);
         }
 
-        string Time::String() {
+        string Time::String() const {
             char    buf[128] = {0};
             char    str[1024] = {0};
 
             strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
             snprintf(str,  sizeof(str) - 1, "%s.%06d", buf, nsec);
 
-            return string(str);
+            return str;
         }
 
 

@@ -2,9 +2,10 @@ set(src_files
     )
 if (IS_WIN)
     set(src_files ${src_files}
-		windows/net_listener_iocp.cpp
-		windows/net_listener_iocp.h
+		windows/net_iocp_accpeter.cpp
+		windows/net_iocp_accpeter.h
 		windows/socket_win.cpp
+		windows/net_conn_win.cpp
         )
 endif()
 

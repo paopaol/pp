@@ -12,10 +12,6 @@ int main(int argc, char *argv[])
     printf("%d\n", b.Len());
     char    name[1024] = {0};
     b.Read(name, 2);
-    b.Optimize();
-    if (b.UnReadByte(e) == false){
-        printf("%s\n", e.what());
-    }
 
     return 0 ;
 
