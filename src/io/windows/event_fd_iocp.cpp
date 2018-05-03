@@ -14,7 +14,7 @@ using namespace std;
 
 
 #define SUCCEEDED_WITH_IOCP(result)                                  \
-  ((result) || (GetLastError() == ERROR_IO_PENDING))
+  ((result) || ((::WSAGetLastError()) == ERROR_IO_PENDING))
 
 namespace pp {
     namespace io {
@@ -25,9 +25,6 @@ namespace pp {
 
         IocpEventFd::IocpEventFd(EventLoop *loop, int fd)
             :EventFd(loop, fd)
-            , m_fdCtx(new fdCtx)
-            , postedWriting(false)
-            ,refCnt(0)
         {
         }
 
@@ -52,10 +49,10 @@ namespace pp {
             m_handleAccpetEvent = handler;
         }
 
-        void IocpEventFd::HandleAccpetEvent(int fd, int listenfd)
+        void IocpEventFd::HandleAccpetEvent(int fd)
         {
             if (m_handleAccpetEvent) {
-                m_handleAccpetEvent(fd, listenfd);
+                m_handleAccpetEvent(fd);
             }
         }
 
@@ -64,42 +61,128 @@ namespace pp {
             DWORD recvBytes = 0;
             DWORD flags = 0;
 
-            int ret = WSARecv(m_fd, &m_fdCtx->ReadIoCtx.Wsabuf,
-                1, &recvBytes, &flags, &m_fdCtx->ReadIoCtx.Overlapped, NULL);
-            if (ret == SOCKET_ERROR) {
-                int code = WSAGetLastError();
-                if (code != ERROR_IO_PENDING) {
-					error = hht_make_error_code(static_cast<std::errc>(code));
-                    return -1;
-                }
+            IoRequestRef request = createIoRequest(EventFd::EV_READ);
+            int ret = WSARecv(m_fd, &request.get()->Wsabuf,
+                1, &recvBytes, &flags, &request.get()->Overlapped, NULL);
+            if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
+                int code = ::GetLastError();
+                error = hht_make_error_code(static_cast<std::errc>(code));
+                return -1;
+            }
+            queuedPendingRequest(request);
+            return 0;
+        }
+
+
+        int IocpEventFd::handleZero()
+        {
+            SetActive(IocpEventFd::EV_CLOSE);
+            EventFd::HandleEvent();
+            return 0;
+        }
+
+        int IocpEventFd::handleReadDone()
+        {
+            assert(activePendingReq != nullptr);
+
+            if (activePendingReq->IoSize == 0) {
+                handleZero();
+                return 0;
+            }
+            SetActive(IocpEventFd::EV_READ);
+            EventFd::HandleEvent();
+            return 0;
+        }
+
+
+
+        int IocpEventFd::handleAcceptDone()
+        {
+            errors::error_code error;
+
+            int acpepetFd = activePendingReq->AccpetFd;
+            int listenFd = activePendingReq->IoFd;
+
+            int ret = ::setsockopt(
+                acpepetFd,
+                SOL_SOCKET,
+                SO_UPDATE_ACCEPT_CONTEXT,
+                (char *)&activePendingReq->IoFd,
+                sizeof(activePendingReq->IoFd)
+            );
+
+            SetActive(IocpEventFd::EV_ACCPET);
+            HandleAccpetEvent(acpepetFd);
+           
+            EnableAccpet(error);
+
+            return 0;
+        }
+
+        int IocpEventFd::handleWriteDone()
+        {
+            errors::error_code error;
+
+            assert(activePendingReq != nullptr);
+            if (activePendingReq->IoSize == 0) {
+                handleZero();
+                return 0;
+            }
+            assert(activePendingReq != nullptr);
+            activePendingReq->IoOpt = IocpEventFd::EV_WRITE;
+            activePendingReq->SentBytes += activePendingReq->IoSize;
+            if (activePendingReq->SentBytes < activePendingReq->TotalBytes) {
+                PostWrite(activePendingReq->Buffer + activePendingReq->SentBytes,
+                    activePendingReq->TotalBytes - activePendingReq->SentBytes, error);
+            }
+            else {
+                SetActive(IocpEventFd::EV_WRITE);
+                EventFd::HandleEvent();
             }
             return 0;
         }
 
+
+
+
+
+        void IocpEventFd::HandleEvent()
+        {
+            if (activePendingReq->IoOpt & IocpEventFd::EV_WAKEUP) {
+                //handleWakeUp();
+                return ;
+            }
+            else if (activePendingReq->IoOpt & IocpEventFd::EV_READ) {
+                handleReadDone();
+            }
+            else if (activePendingReq->IoOpt & IocpEventFd::EV_ACCPET) {
+                handleAcceptDone();
+            }
+            else if (activePendingReq->IoOpt & IocpEventFd::EV_WRITE) {
+                handleWriteDone();
+            }
+        }
 
         int IocpEventFd::PostWrite(const void *data, int len, errors::error_code &error)
         {
             DWORD sentBytes = 0;
 
-            PreparefdCtx(io::IocpEventFd::EV_WRITE);
-            memcpy(m_fdCtx->WriteIoCtx.Wsabuf.buf, data, len);
-            m_fdCtx->WriteIoCtx.Wsabuf.len = len;
-            m_fdCtx->WriteIoCtx.TotalBytes = len;
+            IoRequestRef request = createIoRequest(IocpEventFd::EV_WRITE);
+            memcpy(request.get()->Wsabuf.buf, data, len);
+            request.get()->Wsabuf.len = len;
+            request.get()->TotalBytes = len;
 
-            int ret = WSASend(m_fd, &m_fdCtx->WriteIoCtx.Wsabuf,
-                1, &sentBytes, 0, &m_fdCtx->WriteIoCtx.Overlapped, NULL);
-            if (ret == SOCKET_ERROR) {
-                int code = WSAGetLastError();
-                if (code != ERROR_IO_PENDING) {
-					error = hht_make_error_code(static_cast<std::errc>(code));
-                    return -1;
-                }
+            int ret = WSASend(m_fd, &request.get()->Wsabuf,
+                1, &sentBytes, 0, &request.get()->Overlapped, NULL);
+            if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
+                error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
+                return -1;
             }
-            postedWriting = true;
+            queuedPendingRequest(request);
             return 0;
         }
 
-        static LPFN_ACCEPTEX                fnAcceptEx = NULL;
+        static LPFN_ACCEPTEX                acceptEx = NULL;
 
         class IocpAccpeterFuncGetter {
         public:
@@ -113,8 +196,8 @@ namespace pp {
                         SIO_GET_EXTENSION_FUNCTION_POINTER,
                         &acceptex_guid,
                         sizeof(acceptex_guid),
-                        &fnAcceptEx,
-                        sizeof(fnAcceptEx),
+                        &acceptEx,
+                        sizeof(acceptEx),
                         &bytes,
                         NULL,
                         NULL
@@ -126,64 +209,46 @@ namespace pp {
         };
 
         
+        IocpEventFd::IoRequestRef IocpEventFd::createIoRequest(int ev)
+        {
+            IoRequestRef    request = std::make_shared<struct IoRequest>();
+
+            request->IoFd = Fd();
+            request->IoOpt |= ev;
+            return request;
+        }
+
 
         int IocpEventFd::PostAccpet(errors::error_code &error)
         {
             DWORD   recvBytes = 0;
             int     ret = 0;
-            static IocpAccpeterFuncGetter iocpAccpeterFuncGetter(m_fdCtx->Fd);
+            static IocpAccpeterFuncGetter iocpAccpeterFuncGetter(Fd());
 
             int accept_socket = net::NewSocket(AF_INET, SOCK_STREAM, error);
             hht_return_if_error(error, -1);
 
-            ret = fnAcceptEx(m_fdCtx->Fd, 
+            IoRequestRef    request = createIoRequest(IocpEventFd::EV_ACCPET);
+
+            ret = acceptEx(Fd(),
                 accept_socket,
-                (LPVOID)(m_fdCtx->ReadIoCtx.Buffer),
+                (LPVOID)(request->Buffer),
                 0,
                 sizeof(SOCKADDR_STORAGE), 
                 sizeof(SOCKADDR_STORAGE),
                 &recvBytes,
-                (LPOVERLAPPED) &(m_fdCtx->ReadIoCtx.Overlapped));
+                (LPOVERLAPPED) &(request->Overlapped));
 
             if (!SUCCEEDED_WITH_IOCP(ret)) {
                 error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 closesocket(accept_socket);
                 return -1;
             }
-            m_fdCtx->ReadIoCtx.FdAccpet = accept_socket;
+            queuedPendingRequest(request);
+            request->AccpetFd = accept_socket;
             return 0;
         }
 
-
-        int IocpEventFd::PreparefdCtx(int ev)
-        {
-            ioCtx    *ioCtxptr = NULL;
-
-            if (ev == IocpEventFd::EV_WRITE) {
-                ioCtxptr = &m_fdCtx->WriteIoCtx;
-            }else {
-				ioCtxptr = &m_fdCtx->ReadIoCtx;
-			}
-
-
-            m_fdCtx->Fd = Fd();
-
-			memset(ioCtxptr, 0, sizeof(*ioCtxptr));
-            ioCtxptr->Overlapped.Internal = 0;
-            ioCtxptr->Overlapped.InternalHigh = 0;
-            ioCtxptr->Overlapped.Offset = 0;
-            ioCtxptr->Overlapped.OffsetHigh = 0;
-            ioCtxptr->Overlapped.hEvent = NULL;
-            ioCtxptr->IoOpt |= ev;
-
-            ioCtxptr->TotalBytes = 0;
-            ioCtxptr->SentBytes = 0;
-            ioCtxptr->Wsabuf.buf = ioCtxptr->Buffer;
-            ioCtxptr->Wsabuf.len = sizeof(ioCtxptr->Buffer);
-
-            //ZeroMemory(ioCtxptr->Wsabuf.buf, ioCtxptr->Wsabuf.len);
-            return 0;
-        }
 
 
 

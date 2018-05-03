@@ -25,23 +25,20 @@ namespace pp {
             static const int    EV_CLOSE = EV_WRITE << 1;
             static const int    EV_ERROR = EV_CLOSE << 1;
 
-            typedef std::function<void(void *data, int len)> DataHandler;
-            typedef std::function<void(void *data, int len)> BufferHandler;
-            typedef std::function<void()> Handler;
+            typedef std::function<void(errors::error_code &error)> EventHandler;
 
             EventFd(EventLoop *loop, int fd);
             ~EventFd() {}
-            void SetWriteHandler(const DataHandler &handler);
-            void SetReadHandler(const DataHandler &handler);
-            void SetErrorHandler(const Handler &handler);
-            void SetCloseHandler(const Handler &handler);
+            void SetWriteHandler(const EventHandler &handler);
+            void SetReadHandler(const EventHandler &handler);
+            void SetErrorHandler(const EventHandler &handler);
+            void SetCloseHandler(const EventHandler &handler);
 
-            void HandleEvent(void *data, int len);
-            void HandleEventWithGuard(void *data, int len);
+            void HandleEvent();
+            void HandleEventWithGuard();
             void SetActive(int events);
 
             void EnableRead(errors::error_code &error);
-           
             void EnableWrite(errors::error_code &error);
             int  GetEnabledEvent();
             bool HasBeenEnableRead();
@@ -65,10 +62,10 @@ namespace pp {
             bool enableRead;
             bool enableWrite;
             int m_activeEvent;
-            DataHandler m_handleWrite;
-            DataHandler m_handleRead;
-            Handler m_handleClose;
-            Handler m_handleError;
+            EventHandler m_handleWrite;
+            EventHandler m_handleRead;
+            EventHandler m_handleClose;
+            EventHandler m_handleError;
             std::weak_ptr<void> tie_;
             bool                tied_;
 

@@ -19,7 +19,7 @@ namespace pp {
 
 
             Buffer();
-            ~Buffer() { printf("ddddddddddddddddddd\n"); }
+            ~Buffer() { /*printf("ddddddddddddddddddd\n")*/; }
           
 
             //Read All

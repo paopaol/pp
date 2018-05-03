@@ -15,23 +15,23 @@ namespace pp {
         {
         }
 
-        void EventFd::SetWriteHandler(const DataHandler &handler)
+        void EventFd::SetWriteHandler(const EventHandler &handler)
         {
             m_handleWrite = handler;
         }
 
-        void EventFd::SetReadHandler(const DataHandler &handler)
+        void EventFd::SetReadHandler(const EventHandler &handler)
         {
             m_handleRead = handler;
         }
 
-        void EventFd::SetErrorHandler(const Handler &handler)
+        void EventFd::SetErrorHandler(const EventHandler &handler)
         {
            
 			 m_handleError = handler;
         }
 
-        void EventFd::SetCloseHandler(const Handler &handler)
+        void EventFd::SetCloseHandler(const EventHandler &handler)
         {
             m_handleClose = handler;
         }
@@ -89,36 +89,37 @@ namespace pp {
             return m_eventLoop;
         }
 
-        void EventFd::HandleEventWithGuard(void *data, int len)
+        void EventFd::HandleEventWithGuard()
         {
+            errors::error_code error;
             if (m_activeEvent & EV_READ &&
                 m_handleRead) {
-                m_handleRead(data, len);
+                m_handleRead(error);
             }
             if (m_activeEvent & EV_WRITE &&
                 m_handleWrite) {
-                m_handleWrite(data, len);
+                m_handleWrite(error);
             }
             if (m_activeEvent & EV_CLOSE &&
                 m_handleClose) {
-                m_handleClose();
+                m_handleClose(error);
             }
             if (m_activeEvent & EV_ERROR &&
                 m_handleError) {
-                m_handleError();
+                m_handleError(error);
             }
         }
-        void EventFd::HandleEvent(void *data, int len)
+        void EventFd::HandleEvent()
         {
             std::shared_ptr<void> guard;
             if (tied_) {
                 guard = tie_.lock();
                 if (guard) {
-                    HandleEventWithGuard(data, len);
+                    HandleEventWithGuard();
                 }
             }
             else {
-                HandleEventWithGuard(data, len);
+                HandleEventWithGuard();
             }
         }
 

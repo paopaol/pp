@@ -77,7 +77,7 @@ namespace pp {
                 eventPoller->Poll(INFINITE, m_activeEvents, error);
                 for (auto ev = m_activeEvents.begin();
                     ev != m_activeEvents.end(); ev++) {
-                    (*ev)->HandleEvent(NULL, 0);
+                    (*ev)->HandleEvent();
                 }
                 if (error.value() != 0) {
                     fprintf(stderr, "%s\n", error.full_message().c_str());

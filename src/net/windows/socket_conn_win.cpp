@@ -24,23 +24,16 @@ namespace pp {
 			,remote("", -1)
 			,local("", -1)
 		{
-			evConnFd->SetReadHandler([&](void *data, int len) {
-				errors::error_code error;
-				handleRead(data, len, error);
+			evConnFd->SetReadHandler([&](errors::error_code &error) {
+				handleRead(error);
 			});
-			evConnFd->SetWriteHandler([&](void *unused, int len) {
-				errors::error_code error;
-
-				handleWrite(unused, len, error);
+			evConnFd->SetWriteHandler([&](errors::error_code &error) {
+				handleWrite(error);
 			});
-			evConnFd->SetCloseHandler([&]() {
-				errors::error_code error;
-
+			evConnFd->SetCloseHandler([&](errors::error_code &error) {
 				handleClose(error);
 			});
-			evConnFd->SetErrorHandler([&]() {
-				errors::error_code error;
-
+			evConnFd->SetErrorHandler([&](errors::error_code &error) {
 				handleError(error);
 			});
 
@@ -78,9 +71,8 @@ namespace pp {
         void SocketConn::handleClose(const errors::error_code &error)
         {
             io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
-            evfd->decreaseRef();
-
-            if (!evfd->ZeroRef()) {
+            evfd->removeActiveRequest();
+            if (evfd->PendingRequestSize() > 0) {
                 return;
             }
 
@@ -97,61 +89,59 @@ namespace pp {
             io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
 
 			state = DisConnected;
-            evfd->decreaseRef();
-			if (userHandleError  && evfd->ZeroRef()) {
+			if (userHandleError  && evfd->PendingRequestSize() == 0) {
 				userHandleError(shared_from_this());
 			}
 		}
 
-        void SocketConn::handleRead(void *data, int len, errors::error_code &error)
+        void SocketConn::handleRead(errors::error_code &error)
         {
             io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
-            evfd->decreaseRef();
-            readBuf.Write((const char *)data, len);
+           
+            io::IocpEventFd::IoRequestRef doneReq = evfd->removeActiveRequest();
+
+            readBuf.Write((const char *)doneReq->Buffer, doneReq->IoSize);
 
             if (readBuf.Len() > 0 && userHandleRead) {
                 userHandleRead(shared_from_this(), readBuf, _time::Now());
             }
 
-            if (!evfd->ZeroRef()) {
+            if (evfd->PendingRequestSize() > 0) {
                 return;
             }
 
             evfd->EnableRead(error);
-            evfd->increaseRef();
             if (error.value() != 0) {
                 handleClose(error);
             }
 
         }
 
-		void SocketConn::handleWrite(void *unused, int len, errors::error_code &error)
-		{
-			io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+        void SocketConn::handleWrite(errors::error_code &error)
+        {
+            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+            io::IocpEventFd::IoRequestRef doneReq = evfd->removeActiveRequest();
 
-            evfd->decreaseRef();
-			if (writeBuf.Len() > 0) {
-				int minWrite = min(writeBuf.Len(), MAX_WSA_BUFF_SIZE);
-				char data[MAX_WSA_BUFF_SIZE] = { 0 };
-				writeBuf.Read(data, sizeof(data));
+            if (writeBuf.Len() > 0) {
+                int minWrite = min(writeBuf.Len(), MAX_WSA_BUFF_SIZE);
+                char data[MAX_WSA_BUFF_SIZE] = { 0 };
+                writeBuf.Read(data, sizeof(data));
 
-				evfd->PostWrite(data, minWrite, error);
-                evfd->increaseRef();
+                evfd->PostWrite(data, minWrite, error);
                 if (error.value() != 0) {
                     handleClose(error);
                 }
-				return;
-			}
-            //如果不主动投递一个接收请求，那么下次对方发送过来的数据就不会接收到了
-            if (!evfd->ZeroRef()) {
                 return;
             }
-           evfd->EnableRead(error);
-           evfd->increaseRef();
-           if (error.value() != 0) {
-               handleClose(error);
-           }
-		}
+            //如果不主动投递一个接收请求，那么下次对方发送过来的数据就不会接收到了
+            if (evfd->PendingRequestSize() > 0) {
+                return;
+            }
+            evfd->EnableRead(error);
+            if (error.value() != 0) {
+                handleClose(error);
+            }
+        }
 
 		void SocketConn::Write(const void *data, int len)
 		{
@@ -186,7 +176,7 @@ namespace pp {
 			* 假定第一次发送的数据很大，不能一次性发送给socket，那么就需要先发送一部分，剩下的
 			*写入缓冲
 			*/
-			if (writeBuf.Len() > 0 && evfd->HasPostedWrite()) {
+			if (writeBuf.Len() > 0 && evfd->PendingRequestSize() == 0) {
 				writeBuf.Write((char *)data, len);
 				return 0;
 			}
@@ -267,10 +257,7 @@ namespace pp {
 			io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
 
 			assert(evLoop->InCreateThread());
-			//if (!evfd->HasPostedWrite()){
-				Socket::shutdownWrite(evfd->Fd());
-                evfd->increaseRef();
-			//}
+            Socket::shutdownWrite(evfd->Fd());
 			
 		}
 
@@ -289,7 +276,6 @@ namespace pp {
 			errors::error_code error;
             evfd->EnableRead(error);
             if (error.value() == 0) {
-                evfd->increaseRef();
             }
 		}
 

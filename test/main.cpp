@@ -112,12 +112,23 @@ int main(int argc, char *argv)
 			std::cout << "remote:" << conn->RemoteAddr(error).string() << " closed" << std::endl;
 			return;
 		}
-		//std::cout << time.String() << "  remote:" << conn->RemoteAddr(error).string() << "connected" << std::endl;
+		std::cout << time.String() << "  remote:" << conn->RemoteAddr(error).string() << "connected" << std::endl;
 
 	});
 
 	server.SetOnMessageHandler([&](const net::SocketConnRef &conn, bytes::Buffer &message, const _time::Time &time){
-		conn->Write(message);
+        Slice s;
+        message.Read(s);
+        std::string str(s.data(), s.size());
+        //std::cout << str << std::endl;
+        std::string resp = "HTTP / 1.1 200 OK\nDate:Sat, 31 Dec 2005 23:59:59 GMT\nContent-Type:text/html; charset=ISO-8859-1\n\n<html><head><title>Wrox Homepage</title></head><body><!--body goes here --><p>hello pp</p></body></html>";
+
+
+
+
+
+
+		conn->Write(resp.data(), resp.size());
 		conn->Shutdown();
 	});
 

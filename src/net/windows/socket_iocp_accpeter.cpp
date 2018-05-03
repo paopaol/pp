@@ -23,8 +23,9 @@ namespace pp {
             m_socket.SetNonblock(m_error);
 
             /** \brief   The event listen fd. set handle accpet event */
-            eventListenFd.SetAccpetEventHandler([&](int fd, int listenfd) {
-                handleAccpetEvent(fd, listenfd);
+            eventListenFd.SetAccpetEventHandler([&](int fd) {
+                eventListenFd.removeActiveRequest();
+                handleAccpetEvent(fd);
             });
         }
 
@@ -32,14 +33,7 @@ namespace pp {
             m_handleNewConn = handler;
         }
 
-        void SocketIocpAccpeter::handleAccpetEvent(int fd, int listenfd) {
-            int ret = ::setsockopt(
-                fd,
-                SOL_SOCKET,
-                SO_UPDATE_ACCEPT_CONTEXT,
-                (char *)&listenfd,
-                sizeof(listenfd)
-            );
+        void SocketIocpAccpeter::handleAccpetEvent(int fd) {
             m_handleNewConn(fd);
         }
 

@@ -16,18 +16,18 @@ void thread_local_storage_init()
     //static atomic_bool inited = false;
     static bool inited = false;
 
-    if (inited){
+    if (inited) {
         return;
     }
     inited = true;
-   index =  TlsAlloc();
-   assert(index != TLS_OUT_OF_INDEXES);
-   inited = true;
+    index = TlsAlloc();
+    assert(index != TLS_OUT_OF_INDEXES);
+    inited = true;
 }
 
 void loopPushToThread(void *loop)
 {
-   TlsSetValue(index, loop);
+    TlsSetValue(index, loop);
 }
 
 void loopPopFromThread()
@@ -36,14 +36,14 @@ void loopPopFromThread()
 }
 
 
-namespace pp{
-namespace io {
-bool EventLoop::threadAlreadyExistLoop()
-{
-    if (TlsGetValue(index) == 0){
-       return false;
+namespace pp {
+    namespace io {
+        bool EventLoop::threadAlreadyExistLoop()
+        {
+            if (TlsGetValue(index) == 0) {
+                return false;
+            }
+            return true;
+        }
     }
-    return true;
-}
-}
 }

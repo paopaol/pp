@@ -20,7 +20,7 @@ namespace pp {
 
 
         private:
-            void handleAccpetEvent(int fd, int listenfd);
+            void handleAccpetEvent(int fd);
 
 			DISABLE_COPY_CONSTRCT(SocketIocpAccpeter);
 

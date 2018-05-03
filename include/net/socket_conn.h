@@ -53,8 +53,8 @@ namespace pp {
 			void EnableRead(errors::error_code &error);
 
         private:
-            void handleRead(void *data, int len, errors::error_code &error);
-            void handleWrite(void *data, int len, errors::error_code &error);
+            void handleRead(errors::error_code &error);
+            void handleWrite(errors::error_code &error);
             void handleClose(const errors::error_code &error);
             void handleError(const errors::error_code &error);
 			int Write(const void *data, int len, errors::error_code &error);
