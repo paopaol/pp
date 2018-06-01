@@ -307,7 +307,7 @@ namespace pp{
         //    }
         //}
 
-        //uint64_t Timer::Fd() {
+        //uint64_t Timer::fd() {
         //    return timerfd;
         //}
 

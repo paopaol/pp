@@ -1,7 +1,7 @@
 #ifndef HHT_CONDITION_H
 #define HHT_CONDITION_H 
 
-#include <system/mutex.h>
+#include <system/sys_mutex.h>
 
 namespace pp{
 	namespace system{

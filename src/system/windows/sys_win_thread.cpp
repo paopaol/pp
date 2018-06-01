@@ -1,4 +1,4 @@
-#include <system/thread.h>
+#include <system/sys_thread.h>
 
 #include <Windows.h>
 

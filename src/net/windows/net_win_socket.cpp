@@ -61,7 +61,7 @@ namespace pp {
 			return 0;
 		}
 
-        int Socket::Fd()
+        int Socket::fd()
         {
             return fd_;
         }

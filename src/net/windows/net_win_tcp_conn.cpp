@@ -1,7 +1,7 @@
-#include <net/socket_conn.h>
+#include <net/net_tcp_conn.h>
 
-#include <io/event_loop.h>
-#include <windows/event_fd_iocp.h>
+#include <io/io_event_loop.h>
+#include <windows/io_win_iocp_event_fd.h>
 #include <fmt/fmt.h>
 #include <bytes/buffer.h>
 #include <hht.h>
@@ -15,25 +15,25 @@ using namespace std;
 
 namespace pp {
 	namespace net {
-		SocketConn::SocketConn(io::EventLoop *loop, int af, int type, int fd)
+		SocketConn::SocketConn(io::event_loop *loop, int af, int type, int fd)
 			:evLoop(loop)
 			,socket(af, type, fd)
-			,evConnFd(std::make_shared<io::IocpEventFd>(evLoop, fd))
+			,evConnFd(std::make_shared<io::iocp_event_fd>(evLoop, fd))
 			,closeConn(false)
 			,state(Connecting)
 			,remote("", -1)
 			,local("", -1)
 		{
-			evConnFd->SetReadHandler([&](errors::error_code &error) {
+			evConnFd->set_read_handler([&](errors::error_code &error) {
 				handleRead(error);
 			});
-			evConnFd->SetWriteHandler([&](errors::error_code &error) {
+			evConnFd->set_write_handler([&](errors::error_code &error) {
 				handleWrite(error);
 			});
-			evConnFd->SetCloseHandler([&](errors::error_code &error) {
+			evConnFd->set_close_handler([&](errors::error_code &error) {
 				handleClose(error);
 			});
-			evConnFd->SetErrorHandler([&](errors::error_code &error) {
+			evConnFd->set_error_handler([&](errors::error_code &error) {
 				handleError(error);
 			});
 
@@ -47,32 +47,32 @@ namespace pp {
 			userHandleConnect = handler;
 		}
 
-		void SocketConn::SetReadHandler(const SocketMessageHandler &handler)
+		void SocketConn::set_read_handler(const SocketMessageHandler &handler)
 		{
 			userHandleRead = handler;
 		}
 
-		void SocketConn::SetWriteHandler(const SocketMessageHandler &handler)
+		void SocketConn::set_write_handler(const SocketMessageHandler &handler)
 		{
 			userHandleWrite = handler;
 		}
 
-		void SocketConn::SetCloseHandler(const CloseHandler &handler)
+		void SocketConn::set_close_handler(const CloseHandler &handler)
 		{
 			userHandleClose = handler;
 		}
 
 
-		//void SocketConn::SetErrorHandler(const Handler &handler)
+		//void SocketConn::set_error_handler(const Handler &handler)
 		//{
 		//    userHandleError = handler;
 		//}
 
         void SocketConn::handleClose(const errors::error_code &error)
         {
-            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
-            evfd->removeActiveRequest();
-            if (evfd->PendingRequestSize() > 0) {
+            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+            evfd->remove_active_request();
+            if (evfd->pending_request_size() > 0) {
                 return;
             }
 
@@ -86,19 +86,19 @@ namespace pp {
 
 		void SocketConn::handleError(const errors::error_code &error)
 		{
-            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
 
 			state = DisConnected;
-			if (userHandleError  && evfd->PendingRequestSize() == 0) {
+			if (userHandleError  && evfd->pending_request_size() == 0) {
 				userHandleError(shared_from_this());
 			}
 		}
 
         void SocketConn::handleRead(errors::error_code &error)
         {
-            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
            
-            io::IocpEventFd::IoRequestRef doneReq = evfd->removeActiveRequest();
+            io::iocp_event_fd::io_request_ref doneReq = evfd->remove_active_request();
 
             readBuf.Write((const char *)doneReq->Buffer, doneReq->IoSize);
 
@@ -106,11 +106,11 @@ namespace pp {
                 userHandleRead(shared_from_this(), readBuf, _time::Now());
             }
 
-            if (evfd->PendingRequestSize() > 0) {
+            if (evfd->pending_request_size() > 0) {
                 return;
             }
 
-            evfd->EnableRead(error);
+            evfd->enable_read(error);
             if (error.value() != 0) {
                 handleClose(error);
             }
@@ -119,25 +119,25 @@ namespace pp {
 
         void SocketConn::handleWrite(errors::error_code &error)
         {
-            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
-            io::IocpEventFd::IoRequestRef doneReq = evfd->removeActiveRequest();
+            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+            io::iocp_event_fd::io_request_ref doneReq = evfd->remove_active_request();
 
             if (writeBuf.Len() > 0) {
                 int minWrite = min(writeBuf.Len(), MAX_WSA_BUFF_SIZE);
                 char data[MAX_WSA_BUFF_SIZE] = { 0 };
                 writeBuf.Read(data, sizeof(data));
 
-                evfd->PostWrite(data, minWrite, error);
+                evfd->post_write(data, minWrite, error);
                 if (error.value() != 0) {
                     handleClose(error);
                 }
                 return;
             }
             //如果不主动投递一个接收请求，那么下次对方发送过来的数据就不会接收到了
-            if (evfd->PendingRequestSize() > 0) {
+            if (evfd->pending_request_size() > 0) {
                 return;
             }
-            evfd->EnableRead(error);
+            evfd->enable_read(error);
             if (error.value() != 0) {
                 handleClose(error);
             }
@@ -148,7 +148,7 @@ namespace pp {
 			if (state == Connected){
 				Slice slice((const char *)data, (const char *)data + len);
 
-				evLoop->RunInLoop([&, slice](){ 
+				evLoop->run_in_loop([&, slice](){ 
 					errors::error_code error;
 					Write(slice.data(), slice.size(), error);
 				});
@@ -162,9 +162,9 @@ namespace pp {
 				return 0;
 			}
 
-			assert(evLoop->InCreateThread());
+			assert(evLoop->in_created_thread());
 
-			io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+			io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
 
 
 			/*Conn 构造后,第一次发送数据的话,writeBuf
@@ -176,19 +176,18 @@ namespace pp {
 			* 假定第一次发送的数据很大，不能一次性发送给socket，那么就需要先发送一部分，剩下的
 			*写入缓冲
 			*/
-			if (writeBuf.Len() > 0 && evfd->PendingRequestSize() == 0) {
+			if (writeBuf.Len() > 0 && evfd->pending_request_size() == 0) {
 				writeBuf.Write((char *)data, len);
 				return 0;
 			}
 
 			if (len <= MAX_WSA_BUFF_SIZE) {
-				evfd->PostWrite(data, len, error);
+				evfd->post_write(data, len, error);
 				return 0;
 			}
 			//data is too long
-			evfd->PostWrite(data, MAX_WSA_BUFF_SIZE, error);
+			evfd->post_write(data, MAX_WSA_BUFF_SIZE, error);
 			writeBuf.Write((char *)data + MAX_WSA_BUFF_SIZE, len - MAX_WSA_BUFF_SIZE);
-			//TrackWrite();
 			return 0;
 		}
 
@@ -199,7 +198,7 @@ namespace pp {
 			Slice slice;
 			buffer.Read(slice);
 
-			evLoop->RunInLoop([&, slice](){ 
+			evLoop->run_in_loop([&, slice](){ 
 				errors::error_code error;
 				Write((const char *)slice.data(), slice.size(), error);
 			});
@@ -209,7 +208,7 @@ namespace pp {
 		int SocketConn::Close()
 		{
 			//state = DisConnecting;
-			//CloseHandle((HANDLE)evConnFd->Fd());
+			//CloseHandle((HANDLE)evConnFd->fd());
 			//if (userHandleClose) {
 			//    userHandleClose();
 			//}
@@ -236,9 +235,9 @@ namespace pp {
 			return local;
 		}
 
-		void SocketConn::EnableRead(errors::error_code &error)
+		void SocketConn::enable_read(errors::error_code &error)
 		{
-			evConnFd->EnableRead(error);
+			evConnFd->enable_read(error);
 		}
 
 		void SocketConn::Shutdown()
@@ -247,26 +246,26 @@ namespace pp {
 				return;
 			}
 			state = DisConnecting;
-			evLoop->RunInLoop([&](){
+			evLoop->run_in_loop([&](){
 				ShutdownInLoop();
 			});
 		}
 
 		void SocketConn::ShutdownInLoop()
 		{
-			io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+			io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
 
-			assert(evLoop->InCreateThread());
-            Socket::shutdownWrite(evfd->Fd());
+			assert(evLoop->in_created_thread());
+            Socket::shutdownWrite(evfd->fd());
 			
 		}
 
 		void SocketConn::ConnectEstablished()
 		{
-            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
 
 
-			assert(evLoop->InCreateThread());
+			assert(evLoop->in_created_thread());
 			assert(state == Connecting);
 			state = Connected;
 			if (userHandleConnect) {
@@ -274,23 +273,23 @@ namespace pp {
 			}
             evConnFd->tie(shared_from_this());
 			errors::error_code error;
-            evfd->EnableRead(error);
+            evfd->enable_read(error);
             if (error.value() == 0) {
             }
 		}
 
 		void SocketConn::ConnectDestroyed()
 		{
-            io::IocpEventFd *evfd = static_cast<io::IocpEventFd *>(evConnFd.get());
+            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
 
-            assert(evLoop->InCreateThread());
+            assert(evLoop->in_created_thread());
 
 			if (state == DisConnected){
 				if (userHandleConnect) {
 					userHandleConnect(shared_from_this(), _time::Now());
 				}
                 errors::error_code error;
-                evfd->removeEvent(error);
+                evfd->remove_event(error);
 			}
 		}
 

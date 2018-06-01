@@ -1,7 +1,7 @@
 #ifndef NET_CONN_H
 #define NET_CONN_H
 
-#include <io/event_fd.h>
+#include <io/io_event_fd.h>
 #include <bytes/buffer.h>
 #include <net/net.h>
 #include <time/_time.h>
@@ -20,7 +20,7 @@ namespace pp {
         typedef std::function<void(const net::SocketConnRef, const _time::Time &)> ConnectionHandler;
         typedef std::function<void(const net::SocketConnRef, bytes::Buffer &, const _time::Time &)> SocketMessageHandler;
 
-        class io::EventLoop;
+        class io::event_loop;
         class SocketConn: public std::enable_shared_from_this<SocketConn> {
         public:
             enum ConnStatus {
@@ -31,14 +31,14 @@ namespace pp {
             };
 
 
-            SocketConn(io::EventLoop *loop,int af, int type, int fd);
+            SocketConn(io::event_loop *loop,int af, int type, int fd);
             ~SocketConn() {
             }
             void SetConnectHandler(const ConnectionHandler &handler);
-            void SetReadHandler(const SocketMessageHandler &handler);
-            void SetWriteHandler(const SocketMessageHandler &handler);
-            //void SetErrorHandler(const Handler &handler);
-            void SetCloseHandler(const CloseHandler &handler);
+            void set_read_handler(const SocketMessageHandler &handler);
+            void set_write_handler(const SocketMessageHandler &handler);
+            //void set_error_handler(const Handler &handler);
+            void set_close_handler(const CloseHandler &handler);
        
             void Write(const void *data, int len);
             void Write(bytes::Buffer &buffer);
@@ -50,7 +50,7 @@ namespace pp {
 			bool Connectioned(){return state == Connected;}
             Addr RemoteAddr(errors::error_code &error);
             Addr LocalAddr(errors::error_code &error);
-			void EnableRead(errors::error_code &error);
+			void enable_read(errors::error_code &error);
 
         private:
             void handleRead(errors::error_code &error);
@@ -65,9 +65,9 @@ namespace pp {
             DISABLE_COPY_CONSTRCT(SocketConn);
 
 
-            io::EventLoop *evLoop;
+            io::event_loop *evLoop;
             net::Socket    socket;
-            io::EventFdRef     evConnFd;
+            io::event_fd_ref     evConnFd;
             SocketMessageHandler userHandleRead;
             SocketMessageHandler userHandleWrite;
             CloseHandler userHandleClose;

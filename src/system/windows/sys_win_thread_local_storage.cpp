@@ -1,6 +1,6 @@
-#include "thread_local_storage.h"
+#include "sys_win_thread_local_storage.h"
 
-#include <io/event_loop.h>
+#include <io/io_event_loop.h>
 
 #include <Windows.h>
 
@@ -38,7 +38,7 @@ void loopPopFromThread()
 
 namespace pp {
     namespace io {
-        bool EventLoop::threadAlreadyExistLoop()
+        bool event_loop::thread_already_has_loop()
         {
             if (TlsGetValue(index) == 0) {
                 return false;

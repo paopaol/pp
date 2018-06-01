@@ -1,4 +1,4 @@
-#include "overlapped_pipe.h"
+#include "io_win_overlapped_pipe.h"
 
 #include <Windows.h>
 
@@ -32,7 +32,7 @@ namespace pp {
             return h;
         }
 
-        int OverlappedNamedPipe::Fd()
+        int OverlappedNamedPipe::fd()
         {
             return (int)h_;
         }

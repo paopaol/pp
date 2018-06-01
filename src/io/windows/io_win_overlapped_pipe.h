@@ -20,7 +20,7 @@ namespace pp {
             {
                 ::CloseHandle(h_);
             }
-            int Fd();
+            int fd();
 
             std::string Name() {
                 return name_;

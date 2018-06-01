@@ -36,7 +36,7 @@ namespace pp{
     public:
         explicit Socket(int af, int type, int fd);
         ~Socket();
-        int Fd();
+        int fd();
 
         int SetTcpNodelay(bool set, errors::error_code &error);
         int SetReuseAddr(bool set, errors::error_code &error);

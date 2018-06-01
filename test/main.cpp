@@ -22,7 +22,7 @@ static std::map<net::SocketConnRef, net::SocketConnRef> connList;
 
 class TcpServer{
 public:
-	TcpServer(io::EventLoop *loop, const net::Addr &addr, const std::string &name)
+	TcpServer(io::event_loop *loop, const net::Addr &addr, const std::string &name)
 		:loop_(loop)
 		,accpeter_(AF_INET, SOCK_STREAM, loop)
 		,bindAddr_(addr)
@@ -64,9 +64,9 @@ private:
         int a = conn.use_count();
 		conn->SetConnectHandler(newConntionHandler_);
          a = conn.use_count();
-		conn->SetReadHandler(socketMessageHandler_);
+		conn->set_read_handler(socketMessageHandler_);
          a = conn.use_count();
-		conn->SetCloseHandler([&](const net::SocketConnRef &conn){
+		conn->set_close_handler([&](const net::SocketConnRef &conn){
 			removeFromConnList(conn);
 		});
 		conn->ConnectEstablished();
@@ -87,7 +87,7 @@ private:
 
 
 
-	io::EventLoop *loop_;
+	io::event_loop *loop_;
 	net::SocketIocpAccpeter accpeter_;
 	std::map<std::string, net::SocketConnRef> connList_;
 	std::string  tcpServerName_;
@@ -102,7 +102,7 @@ private:
 
 int main(int argc, char *argv)
 {
-    io::EventLoop loop;
+    io::event_loop loop;
     errors::error_code error;
 	TcpServer server(&loop, net::Addr("0.0.0.0", 9001), "echo");
 
@@ -133,7 +133,7 @@ int main(int argc, char *argv)
 	});
 
 	server.Start(error);
-    loop.Exec();
+    loop.exec();
     //t.join();
     return 0;
 }

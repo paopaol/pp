@@ -13,7 +13,7 @@
 
 
 namespace pp{
-    
+
 
 namespace errors {
 
@@ -100,7 +100,7 @@ namespace errors {
     };
 
     template<class _Enum>
-    error_code  make_error_code(_Enum code, const std::string &file, 
+    error_code  make_error_code(_Enum code, const std::string &file,
                     const std::string &function, int line) {
         error_code error = std::make_error_code(code);
         error.push_call_stack(file, function, line);
