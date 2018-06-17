@@ -14,63 +14,63 @@
 using namespace std;
 
 namespace pp {
-	namespace net {
-		SocketConn::SocketConn(io::event_loop *loop, int af, int type, int fd)
-			:evLoop(loop)
-			,socket(af, type, fd)
-			,evConnFd(std::make_shared<io::iocp_event_fd>(evLoop, fd))
-			,closeConn(false)
-			,state(Connecting)
-			,remote("", -1)
-			,local("", -1)
-		{
-			evConnFd->set_read_handler([&](errors::error_code &error) {
-				handleRead(error);
-			});
-			evConnFd->set_write_handler([&](errors::error_code &error) {
-				handleWrite(error);
-			});
-			evConnFd->set_close_handler([&](errors::error_code &error) {
-				handleClose(error);
-			});
-			evConnFd->set_error_handler([&](errors::error_code &error) {
-				handleError(error);
-			});
-
-			errors::error_code error;
-			socket.SetNonblock(error);
-		}
-
-
-		void SocketConn::SetConnectHandler(const ConnectionHandler &handler)
-		{
-			userHandleConnect = handler;
-		}
-
-		void SocketConn::set_read_handler(const SocketMessageHandler &handler)
-		{
-			userHandleRead = handler;
-		}
-
-		void SocketConn::set_write_handler(const SocketMessageHandler &handler)
-		{
-			userHandleWrite = handler;
-		}
-
-		void SocketConn::set_close_handler(const CloseHandler &handler)
-		{
-			userHandleClose = handler;
-		}
-
-
-		//void SocketConn::set_error_handler(const Handler &handler)
-		//{
-		//    userHandleError = handler;
-		//}
-
-        void SocketConn::handleClose(const errors::error_code &error)
+    namespace net {
+        tcp_conn::tcp_conn(io::event_loop *loop, int fd)
+            :loop_(loop)
+            , socket_(AF_INET, SOCK_STREAM, fd)
+            , event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd))
+            , state(Connecting)
+            , remote_("", -1)
+            , local_("", -1)
         {
-            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+            event_fd_->set_read_handler([&](errors::error_code &error) {
+                handle_read(error);
+            });
+            event_fd_->set_write_handler([&](errors::error_code &error) {
+                handle_write(error);
+            });
+            event_fd_->set_close_handler([&](errors::error_code &error) {
+                handle_close(error);
+            });
+            event_fd_->set_error_handler([&](errors::error_code &error) {
+                handle_error(error);
+            });
+
+            errors::error_code error;
+            socket_.set_nonblock(error);
+        }
+
+
+        void tcp_conn::set_connect_handler(const connection_handler &handler)
+        {
+            connection_handler_ = handler;
+        }
+
+        void tcp_conn::set_read_handler(const message_handler &handler)
+        {
+            msg_read_handler_ = handler;
+        }
+
+        void tcp_conn::set_write_handler(const message_handler &handler)
+        {
+            msg_write_handler_ = handler;
+        }
+
+        void tcp_conn::set_close_handler(const close_handler &handler)
+        {
+            close_handler_ = handler;
+        }
+
+
+        //void tcp_conn::set_error_handler(const Handler &handler)
+        //{
+        //    error_handler_ = handler;
+        //}
+
+        void tcp_conn::handle_close(const errors::error_code &error)
+        {
+            io::iocp_event_fd *evfd =
+                static_cast<io::iocp_event_fd *>(event_fd_.get());
             evfd->remove_active_request();
             if (evfd->pending_request_size() > 0) {
                 return;
@@ -78,220 +78,246 @@ namespace pp {
 
             assert(state == Connected || state == DisConnecting);
             state = DisConnected;
-           
-            if (userHandleClose) {
-                userHandleClose(shared_from_this());
+
+            if (close_handler_) {
+                close_handler_(shared_from_this());
             }
         }
 
-		void SocketConn::handleError(const errors::error_code &error)
-		{
-            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
-
-			state = DisConnected;
-			if (userHandleError  && evfd->pending_request_size() == 0) {
-				userHandleError(shared_from_this());
-			}
-		}
-
-        void SocketConn::handleRead(errors::error_code &error)
+        void tcp_conn::handle_error(const errors::error_code &error)
         {
-            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
-           
-            io::iocp_event_fd::io_request_ref doneReq = evfd->remove_active_request();
+            io::iocp_event_fd *evfd =
+                static_cast<io::iocp_event_fd *>(event_fd_.get());
 
-            readBuf.Write((const char *)doneReq->Buffer, doneReq->IoSize);
+            state = DisConnected;
+            if (error_handler_  && evfd->pending_request_size() == 0) {
+                error_handler_(shared_from_this());
+            }
+        }
 
-            if (readBuf.Len() > 0 && userHandleRead) {
-                userHandleRead(shared_from_this(), readBuf, _time::Now());
+        void tcp_conn::handle_read(errors::error_code &error)
+        {
+            io::iocp_event_fd *evfd =
+                static_cast<io::iocp_event_fd *>(event_fd_.get());
+
+            io::iocp_event_fd::io_request_ref done_req = evfd->remove_active_request();
+
+            read_buf_.Write((const char *)done_req->Buffer, done_req->IoSize);
+
+            if (read_buf_.Len() > 0 && msg_read_handler_) {
+                msg_read_handler_(shared_from_this(), read_buf_, _time::Now());
             }
 
             if (evfd->pending_request_size() > 0) {
                 return;
             }
 
-            evfd->enable_read(error);
+            evfd->enable_read(error, std::bind(&tcp_conn::start_read, this, std::placeholders::_1));
             if (error.value() != 0) {
-                handleClose(error);
+                handle_close(error);
             }
 
         }
 
-        void SocketConn::handleWrite(errors::error_code &error)
+        void tcp_conn::handle_write(errors::error_code &error)
         {
-            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
-            io::iocp_event_fd::io_request_ref doneReq = evfd->remove_active_request();
+            io::iocp_event_fd *evfd =
+                static_cast<io::iocp_event_fd *>(event_fd_.get());
 
-            if (writeBuf.Len() > 0) {
-                int minWrite = min(writeBuf.Len(), MAX_WSA_BUFF_SIZE);
+            io::iocp_event_fd::io_request_ref unused =
+                evfd->remove_active_request();
+
+            //write remaining data
+            if (write_buf_.Len() > 0) {
+                int minWrite = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
                 char data[MAX_WSA_BUFF_SIZE] = { 0 };
-                writeBuf.Read(data, sizeof(data));
+                write_buf_.Read(data, sizeof(data));
 
                 evfd->post_write(data, minWrite, error);
                 if (error.value() != 0) {
-                    handleClose(error);
+                    handle_close(error);
                 }
                 return;
             }
-            //如果不主动投递一个接收请求，那么下次对方发送过来的数据就不会接收到了
+            //如果不主动投递一个接收请求，
+            //那么下次对方发送过来的数据就不会接收到了
             if (evfd->pending_request_size() > 0) {
                 return;
             }
-            evfd->enable_read(error);
+            evfd->enable_read(error, std::bind(&tcp_conn::start_read, this, std::placeholders::_1));
             if (error.value() != 0) {
-                handleClose(error);
+                handle_close(error);
             }
         }
 
-		void SocketConn::Write(const void *data, int len)
-		{
-			if (state == Connected){
-				Slice slice((const char *)data, (const char *)data + len);
+        void tcp_conn::write(const void* data, int len)
+        {
+            if (state == Connected) {
+                Slice slice((const char*)data, (const char*)data + len);
 
-				evLoop->run_in_loop([&, slice](){ 
-					errors::error_code error;
-					Write(slice.data(), slice.size(), error);
-				});
-			}
-		}
+                loop_->run_in_loop([&, slice]() {
+                    errors::error_code error;
+                    write(slice.data(), slice.size(), error);
+                });
+            }
+        }
 
+        int tcp_conn::write(const void* data, int len, errors::error_code& error)
+        {
+            if (state != Connected) {
+                return 0;
+            }
 
-		int SocketConn::Write(const void *data, int len, errors::error_code &error)
-		{
-			if (state != Connected) {
-				return 0;
-			}
+            assert(loop_->in_created_thread());
 
-			assert(evLoop->in_created_thread());
+            io::iocp_event_fd* evfd =
+                static_cast<io::iocp_event_fd*>(event_fd_.get());
 
-			io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+            /*Conn 构造后,第一次发送数据的话,write_buf_
+            *必然为空。HasPostedWrite必然为false,所以可以直接发送给socket，无需写入缓存,
+            *如果已经有数据提交给socket的话，那么在上次提交的数据，成功发送完之前，不能
+            *再次提交发送，需要先将其缓存起来。因为fdCtx的写缓冲只有一个，如果第一次发送的数据还
+            *没有处理完，就发送第二次，上一次的未处理完的数据就会被覆盖掉.
+            *
+            * 假定第一次发送的数据很大，不能一次性发送给socket，那么就需要先发送一部分，剩下的
+            *写入缓冲
+            */
 
+            if (write_buf_.Len() > 0 && evfd->pending_request_size() == 0) {
+                write_buf_.Write((char*)data, len);
+                return 0;
+            }
 
-			/*Conn 构造后,第一次发送数据的话,writeBuf
-			*必然为空。HasPostedWrite必然为false,所以可以直接发送给socket，无需写入缓存,
-			*如果已经有数据提交给socket的话，那么在上次提交的数据，成功发送完之前，不能
-			*再次提交发送，需要先将其缓存起来。因为fdCtx的写缓冲只有一个，如果第一次发送的数据还
-			*没有处理完，就发送第二次，上一次的未处理完的数据就会被覆盖掉.
-			*
-			* 假定第一次发送的数据很大，不能一次性发送给socket，那么就需要先发送一部分，剩下的
-			*写入缓冲
-			*/
-			if (writeBuf.Len() > 0 && evfd->pending_request_size() == 0) {
-				writeBuf.Write((char *)data, len);
-				return 0;
-			}
+            if (len <= MAX_WSA_BUFF_SIZE) {
+                evfd->post_write(data, len, error);
+                return 0;
+            }
+            // data is too long, only write some
+            evfd->post_write(data, MAX_WSA_BUFF_SIZE, error);
+            write_buf_.Write((char*)data + MAX_WSA_BUFF_SIZE,
+                len - MAX_WSA_BUFF_SIZE);
+            return 0;
+        }
 
-			if (len <= MAX_WSA_BUFF_SIZE) {
-				evfd->post_write(data, len, error);
-				return 0;
-			}
-			//data is too long
-			evfd->post_write(data, MAX_WSA_BUFF_SIZE, error);
-			writeBuf.Write((char *)data + MAX_WSA_BUFF_SIZE, len - MAX_WSA_BUFF_SIZE);
-			return 0;
-		}
+        void tcp_conn::start_read(errors::error_code &error)
+        {
+            io::iocp_event_fd* evfd =
+                static_cast<io::iocp_event_fd*>(event_fd_.get());
 
+            DWORD recvBytes = 0;
+            DWORD flags = 0;
 
+            io::iocp_event_fd::io_request_ref request = 
+                evfd->create_io_request(io::event_fd::EV_READ);
+            int ret = WSARecv(evfd->fd(), &request.get()->Wsabuf, 1, &recvBytes, &flags,
+                &request.get()->Overlapped, NULL);
+            if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
+                int code = ::GetLastError();
+                error = hht_make_error_code(static_cast<std::errc>(code));
+                printf("%s", error.full_message().c_str());
+                return ;
+            }
+            evfd->queued_pending_request(request);
 
-		void SocketConn::Write(bytes::Buffer &buffer)
-		{
-			Slice slice;
-			buffer.Read(slice);
+            return ;
+        }
 
-			evLoop->run_in_loop([&, slice](){ 
-				errors::error_code error;
-				Write((const char *)slice.data(), slice.size(), error);
-			});
-		}
+        void tcp_conn::write(bytes::Buffer& buffer)
+        {
+            Slice slice;
+            buffer.Read(slice);
 
+            loop_->run_in_loop([&, slice]() {
+                errors::error_code error;
+                write((const char*)slice.data(), slice.size(), error);
+            });
+        }
 
-		int SocketConn::Close()
-		{
-			//state = DisConnecting;
-			//CloseHandle((HANDLE)evConnFd->fd());
-			//if (userHandleClose) {
-			//    userHandleClose();
-			//}
+        int tcp_conn::close()
+        {
+            // state = DisConnecting;
+            // CloseHandle((HANDLE)event_fd_->fd());
+            // if (close_handler_) {
+            //    close_handler_();
+            //}
 
-			return 0;
-		}
+            return 0;
+        }
 
-		Addr SocketConn::RemoteAddr(errors::error_code &error)
-		{
-			if (!remote.Ip.empty()) {
-				return remote;
-			}
+        addr tcp_conn::remote_addr(errors::error_code& error)
+        {
+            if (!remote_.Ip.empty()) {
+                return remote_;
+            }
 
-			remote = socket.RemoteAddr(error);
-			return remote;
-		}
+            remote_ = socket_.remote_addr(error);
+            return remote_;
+        }
 
-		Addr SocketConn::LocalAddr(errors::error_code &error)
-		{
-			if (!local.Ip.empty()) {
-				return remote;
-			}
-			local = socket.LocalAddr(error);
-			return local;
-		}
+        addr tcp_conn::local_addr(errors::error_code& error)
+        {
+            if (!local_.Ip.empty()) {
+                return local_;
+            }
+            local_ = socket_.local_addr(error);
+            return local_;
+        }
 
-		void SocketConn::enable_read(errors::error_code &error)
-		{
-			evConnFd->enable_read(error);
-		}
+        void tcp_conn::enable_read(errors::error_code& error)
+        {
+            event_fd_->enable_read(error);
+        }
 
-		void SocketConn::Shutdown()
-		{
-			if (state != Connected){
-				return;
-			}
-			state = DisConnecting;
-			evLoop->run_in_loop([&](){
-				ShutdownInLoop();
-			});
-		}
+        void tcp_conn::shutdown()
+        {
+            if (state != Connected) {
+                return;
+            }
+            state = DisConnecting;
+            loop_->run_in_loop([&]() { shutdown_in_loop(); });
+        }
 
-		void SocketConn::ShutdownInLoop()
-		{
-			io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+        void tcp_conn::shutdown_in_loop()
+        {
+            io::iocp_event_fd* evfd =
+                static_cast<io::iocp_event_fd*>(event_fd_.get());
 
-			assert(evLoop->in_created_thread());
-            Socket::shutdownWrite(evfd->fd());
-			
-		}
+            assert(loop_->in_created_thread());
+            socket::shutdown_write(evfd->fd());
+        }
 
-		void SocketConn::ConnectEstablished()
-		{
-            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+        void tcp_conn::connect_established()
+        {
+            io::iocp_event_fd* evfd =
+                static_cast<io::iocp_event_fd*>(event_fd_.get());
 
-
-			assert(evLoop->in_created_thread());
-			assert(state == Connecting);
-			state = Connected;
-			if (userHandleConnect) {
-				userHandleConnect(shared_from_this(), _time::Time());
-			}
-            evConnFd->tie(shared_from_this());
-			errors::error_code error;
-            evfd->enable_read(error);
+            assert(loop_->in_created_thread());
+            assert(state == Connecting);
+            state = Connected;
+            if (connection_handler_) {
+                connection_handler_(shared_from_this(), _time::Time());
+            }
+            event_fd_->tie(shared_from_this());
+            errors::error_code error;
+            evfd->enable_read(error, std::bind(&tcp_conn::start_read, this, std::placeholders::_1));
             if (error.value() == 0) {
             }
-		}
+        }
 
-		void SocketConn::ConnectDestroyed()
-		{
-            io::iocp_event_fd *evfd = static_cast<io::iocp_event_fd *>(evConnFd.get());
+        void tcp_conn::connect_destroyed()
+        {
+            io::iocp_event_fd* evfd =
+                static_cast<io::iocp_event_fd*>(event_fd_.get());
 
-            assert(evLoop->in_created_thread());
+            assert(loop_->in_created_thread());
 
-			if (state == DisConnected){
-				if (userHandleConnect) {
-					userHandleConnect(shared_from_this(), _time::Now());
-				}
+            if (state == DisConnected) {
+                if (connection_handler_) {
+                    connection_handler_(shared_from_this(), _time::Now());
+                }
                 errors::error_code error;
                 evfd->remove_event(error);
-			}
-		}
-
-	}
+            }
+        }
+    }
 }

@@ -7,8 +7,8 @@
 
 namespace pp {
     namespace net {
-        typedef std::function<void(int fd)> NewConnHandler;
-        typedef std::function<void(const NewConnHandler &handler)>
+        typedef std::function<void(int fd)> new_conn_handler;
+        typedef std::function<void(const new_conn_handler &handler)>
                 NewConnHandlerSetter;
         //listen interface
         struct Listener {

@@ -3,7 +3,7 @@
 
 #include <list>
 #include <cassert>
-#include <system/condition.h>
+#include <system/sys_condition.h>
 
 
 namespace pp {

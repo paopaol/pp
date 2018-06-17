@@ -13,13 +13,13 @@
 
 namespace pp{
   namespace net{
-    struct Addr{
-        Addr(const std::string &ip, int port)
+    struct addr{
+        addr(const std::string &ip, int port)
             :Ip(ip)
             ,Port(port)
         {
         }
-        Addr(){}
+        addr(){}
         
         std::string string() {
             std::stringstream s;
@@ -32,41 +32,40 @@ namespace pp{
         int         Port;
     };
 	
-    class Socket {
+    class socket {
     public:
-        explicit Socket(int af, int type, int fd);
-        ~Socket();
+        explicit socket(int af, int type, int fd);
+        ~socket();
         int fd();
 
-        int SetTcpNodelay(bool set, errors::error_code &error);
-        int SetReuseAddr(bool set, errors::error_code &error);
-        int SetReusePort(bool set, errors::error_code &error);
-        int SetKeepAlive(bool set, errors::error_code &error);
-        int SetNonblock(errors::error_code &error);
+        int set_tcp_nodelay(bool set, errors::error_code &error);
+        int set_reuse_addr(bool set, errors::error_code &error);
+        int set_reuse_port(bool set, errors::error_code &error);
+        int set_keep_alive(bool set, errors::error_code &error);
+        int set_nonblock(errors::error_code &error);
 
-        Addr RemoteAddr(errors::error_code &error);
-        Addr LocalAddr(errors::error_code &error);
+        addr remote_addr(errors::error_code &error);
+        addr local_addr(errors::error_code &error);
 
-        int Bind(const Addr &addr, errors::error_code &error);
-        int Listen(errors::error_code &error);
+        int bind(const addr &addr, errors::error_code &error);
+        int listen(errors::error_code &error);
 
-		static int shutdownWrite(int fd);
+		static int shutdown_write(int fd);
         
 
 
-        friend int NewSocket(int af, int type, errors::error_code &error);
+        friend int newsocket(int af, int type, errors::error_code &error);
     private:
         static int create(int af, int type, errors::error_code &error);
 		
 
-        DISABLE_COPY_CONSTRCT(Socket);
-
-        int fd_;
+        DISABLE_COPY_CONSTRCT(socket);
         int af_;
         int type_;
+        int fd_;
     };
 
-    int NewSocket(int af, int type, errors::error_code &error);
+    int newsocket(int af, int type, errors::error_code &error);
   }
 }
 

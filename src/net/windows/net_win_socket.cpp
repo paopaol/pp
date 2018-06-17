@@ -18,20 +18,20 @@ using namespace std;
 namespace pp {
     namespace net {
 
-        class WsaSocketIniter {
+        class WsasocketIniter {
         public:
-            WsaSocketIniter() {
+            WsasocketIniter() {
                 WSADATA wsaData;
                 WSAStartup(MAKEWORD(2, 2), &wsaData);
             }
         };
 
-        static  WsaSocketIniter wsa_socket_initer;
+        static  WsasocketIniter wsa_socket_initer;
 
 
 
 
-        Socket::Socket(int af, int type, int fd)
+        socket::socket(int af, int type, int fd)
             :fd_(fd)
             ,af_(af)
             ,type_(type)
@@ -39,60 +39,55 @@ namespace pp {
         }
 
 
-        Socket::~Socket()
+        socket::~socket()
         {
-            //closesocket(fd_);
             shutdown(fd_, SD_SEND);
         }
-        int Socket::create(int af, int type, errors::error_code &error)
+        int socket::create(int af, int type, errors::error_code &error)
         {
-            int fd = WSASocket(af, type, 0,
+            int fd = ::WSASocket(af, type, 0,
                 NULL, 0, WSA_FLAG_OVERLAPPED);
             if (fd == INVALID_SOCKET) {
-				error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
             return fd;
         }
 
-		int Socket::shutdownWrite(int fd)
-		{
-			shutdown((SOCKET)fd, SD_SEND);
-			return 0;
-		}
 
-        int Socket::fd()
+
+        int socket::fd()
         {
             return fd_;
         }
 
-        int Socket::SetTcpNodelay(bool set, errors::error_code &error)
+        int socket::set_tcp_nodelay(bool set, errors::error_code &error)
         {
             int _set = set;
 
             int ret = ::setsockopt(fd_, IPPROTO_TCP, TCP_NODELAY,
                 (const char *)&_set, sizeof(_set));
             if (ret != 0) {
-				error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
             return 0;
         }
 
-        int Socket::SetReuseAddr(bool set, errors::error_code &error)
+        int socket::set_reuse_addr(bool set, errors::error_code &error)
         {
             int _set = set;
 
             int ret = ::setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR,
                 (const char *)&_set, sizeof(_set));
             if (ret != 0) {
-				error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
             return 0;
         }
 
-        int Socket::SetReusePort(bool set, errors::error_code &error)
+        int socket::set_reuse_port(bool set, errors::error_code &error)
         {
 #ifdef SO_REUSEPORT
             int _set = set;
@@ -100,43 +95,43 @@ namespace pp {
             int ret = ::setsockopt(fd_, SOL_SOCKET, SO_REUSEPORT,
                 (const char *)&_set, sizeof(_set));
             if (ret != 0) {
-                error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+                error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
 #endif
             return 0;
         }
 
-        int Socket::SetKeepAlive(bool set, errors::error_code &error)
+        int socket::set_keep_alive(bool set, errors::error_code &error)
         {
             int _set = set;
             int ret = ::setsockopt(fd_, SOL_SOCKET, SO_KEEPALIVE, (const char *)&_set, sizeof(_set));
             if (ret != 0) {
-                error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+                error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
             return 0;
         }
 
 
-        int Socket::SetNonblock(errors::error_code &error)
+        int socket::set_nonblock(errors::error_code &error)
         {
             unsigned long set = 1;
             int ret = ::ioctlsocket(fd_, FIONBIO, &set);
             if (ret != 0) {
-				error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
             return 0;
         }
 
-        int Socket::Bind(const Addr &addr, errors::error_code &error)
+        int socket::bind(const addr &addr, errors::error_code &error)
         {
             struct sockaddr_in saddr;
             saddr.sin_family = af_;
             saddr.sin_port = htons(addr.Port);
             if (::inet_pton(af_, addr.Ip.c_str(), &saddr.sin_addr) <= 0) {
-				error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
                 return -1;
             }
             int ret = ::bind(fd_, (const struct sockaddr *)&saddr,
@@ -144,19 +139,25 @@ namespace pp {
             return 0;
         }
 
-        int Socket::Listen(errors::error_code &error)
+        int socket::listen(errors::error_code &error)
         {
             int ret = ::listen(fd_, SOMAXCONN);
             if (ret < 0) {
-				error = hht_make_error_code(static_cast<std::errc>(WSAGetLastError()));
+				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
             }
             return ret;
         }
 
-
-        Addr Socket::RemoteAddr(errors::error_code &error)
+        int socket::shutdown_write(int fd)
         {
-            Addr addr;
+            shutdown((SOCKET)fd, SD_SEND);
+            return 0;
+        }
+
+
+        addr socket::remote_addr(errors::error_code &error)
+        {
+            addr addr;
 
             struct sockaddr_in sa;
             int len = sizeof(sa);
@@ -170,9 +171,9 @@ namespace pp {
             return addr;   
         }
 
-        Addr Socket::LocalAddr(errors::error_code &error)
+        addr socket::local_addr(errors::error_code &error)
         {
-            Addr addr;
+            addr addr;
             struct sockaddr_in sa;
             int len = sizeof(sa);
             if (getsockname(fd_, (struct sockaddr *)&sa, &len) == 0) {
@@ -185,9 +186,9 @@ namespace pp {
             return addr;
         }
 
-        int NewSocket(int af, int type, errors::error_code &error)
+        int newsocket(int af, int type, errors::error_code &error)
         {
-            int fd = Socket::create(af, type, error);
+            int fd = socket::create(af, type, error);
 
             return fd;
         }

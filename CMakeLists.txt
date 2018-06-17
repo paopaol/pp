@@ -32,7 +32,7 @@ include_directories(
 ####io
 set(io-src-list
   src/io/io.cpp
-  src/io/io_thread_local_storage.h
+#  src/io/io_thread_local_storage.h
   src/io/io_event_loop.cpp
   src/io/io_event_fd.cpp
   )
@@ -46,8 +46,13 @@ if(IS_WIN)
     src/io/windows/io_win_iocp_event_fd.h
     src/io/windows/io_win_iocp_poller.cpp
     src/io/windows/io_win_iocp_poller.h
-    src/io/windows/io_win_overlapped_pipe.cpp
-    src/io/windows/io_win_overlapped_pipe.h
+    #src/io/windows/io_win_overlapped_pipe.cpp
+    #src/io/windows/io_win_overlapped_pipe.h
+    
+    #src/io/windows/io_win_iocp_pipe_event_fd.cpp
+    #src/io/windows/io_win_iocp_pipe_event_fd.h
+    #src/io/windows/io_win_iocp_tcp_event_fd.cpp
+    #src/io/windows/io_win_iocp_tcp_event_fd.h
     )
 endif()
 
@@ -55,8 +60,8 @@ endif()
 if(IS_WIN)
   set(net-src-list
     src/net/windows/net_win_tcp_conn.cpp
-    src/net/windows/net_win_iocp_accpeter.cpp
-    src/net/windows/net_win_iocp_accpeter.h
+    src/net/windows/net_win_iocp_tcp_accpeter.cpp
+    src/net/windows/net_win_iocp_tcp_accpeter.h
     src/net/windows/net_win_socket.cpp
     )
 endif()
