@@ -23,6 +23,7 @@ namespace pp {
 
         typedef std::function<void()> accpet_done_handler;
         typedef std::function<void(errors::error_code &error)> start_read_handler;
+        typedef std::function<void(const char *data, int len, errors::error_code &error)> start_write_handler;
 
         struct io_request_t;
         class iocp_event_fd :public event_fd {
@@ -40,12 +41,15 @@ namespace pp {
                     const accpet_done_handler &handler);
             void enable_read(errors::error_code& error, 
                 const start_read_handler &read_handler);
+            void enable_write(errors::error_code& error, 
+                const start_write_handler &write_handler);
            // void enable_wakeup(errors::error_code &error);
 
 
             void handle_event();
             void post_read(errors::error_code &error);
-            int post_write(const void *data, int len, errors::error_code &error);
+            int post_write(const char *data, int len, 
+                const start_write_handler &write_handler, errors::error_code &error);
             int post_accpet(errors::error_code &error);
 
 
@@ -69,6 +73,7 @@ namespace pp {
 
             accpet_done_handler                        accpet_event_handler_;
             start_read_handler                         start_read_;
+            start_write_handler                        start_write_;
             std::map<io_request_t *, io_request_ref>    io_request_list_;
             io_request_ref                              active_pending_req_;
         };

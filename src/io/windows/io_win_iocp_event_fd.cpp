@@ -35,6 +35,12 @@ namespace io {
         event_fd::enable_read(error);
     }
 
+    void iocp_event_fd::enable_write(errors::error_code& error,
+        const start_write_handler &write_handler)
+    {
+        start_write_ = write_handler;
+    }
+
 
 #if 0
     void iocp_event_fd::enable_wakeup(errors::error_code& error)
@@ -98,11 +104,13 @@ namespace io {
         active_pending_req_->IoOpt = iocp_event_fd::EV_WRITE;
         active_pending_req_->SentBytes += active_pending_req_->IoSize;
         if (active_pending_req_->SentBytes < active_pending_req_->TotalBytes) {
-            post_write(active_pending_req_->Buffer
-                           + active_pending_req_->SentBytes,
-                       active_pending_req_->TotalBytes
-                           - active_pending_req_->SentBytes,
-                       error);
+            //FIXME:need test
+            const char *data = active_pending_req_->Buffer
+                + active_pending_req_->SentBytes;
+            int len = active_pending_req_->TotalBytes
+                - active_pending_req_->SentBytes;
+           post_write((const char *)data, len,
+               std::bind(start_write_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), error);
         }
         else {
             set_active(iocp_event_fd::EV_WRITE);
@@ -131,9 +139,13 @@ namespace io {
         }
     }
 
-    int iocp_event_fd::post_write(const void* data, int len,
-                                  errors::error_code& error)
+    int iocp_event_fd::post_write(const char *data, int len,
+        const start_write_handler &write_handler, errors::error_code &error)
     {
+        if (write_handler) {
+            write_handler(data, len, error);
+          }
+#if 0
         DWORD sentBytes = 0;
 
         io_request_ref request = create_io_request(iocp_event_fd::EV_WRITE);
@@ -149,6 +161,7 @@ namespace io {
             return -1;
         }
         queued_pending_request(request);
+#endif
         return 0;
     }
 

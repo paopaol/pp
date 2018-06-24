@@ -129,11 +129,15 @@ namespace pp {
 
             //write remaining data
             if (write_buf_.Len() > 0) {
-                int minWrite = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
+                int min_write = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
                 char data[MAX_WSA_BUFF_SIZE] = { 0 };
                 write_buf_.Read(data, sizeof(data));
 
-                evfd->post_write(data, minWrite, error);
+                evfd->post_write(data, min_write,
+                    std::bind(&tcp_conn::start_write, this, 
+                        std::placeholders::_1, 
+                        std::placeholders::_2, 
+                        std::placeholders::_3), error);
                 if (error.value() != 0) {
                     handle_close(error);
                 }
@@ -189,11 +193,13 @@ namespace pp {
             }
 
             if (len <= MAX_WSA_BUFF_SIZE) {
-                evfd->post_write(data, len, error);
+                evfd->post_write((const char *)data, len,
+                    std::bind(&tcp_conn::start_write, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), error);
                 return 0;
             }
             // data is too long, only write some
-            evfd->post_write(data, MAX_WSA_BUFF_SIZE, error);
+            evfd->post_write((const char *)data, MAX_WSA_BUFF_SIZE,
+                std::bind(&tcp_conn::start_write, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), error);
             write_buf_.Write((char*)data + MAX_WSA_BUFF_SIZE,
                 len - MAX_WSA_BUFF_SIZE);
             return 0;
@@ -220,6 +226,29 @@ namespace pp {
             evfd->queued_pending_request(request);
 
             return ;
+        }
+
+        void tcp_conn::start_write(const void* data, int len, errors::error_code &error)
+        {
+            io::iocp_event_fd* evfd =
+                static_cast<io::iocp_event_fd*>(event_fd_.get());
+
+
+            DWORD sentBytes = 0;
+
+            io::iocp_event_fd::io_request_ref request = evfd->create_io_request(io::iocp_event_fd::EV_WRITE);
+            memcpy(request.get()->Wsabuf.buf, data, len);
+            request.get()->Wsabuf.len = len;
+            request.get()->TotalBytes = len;
+
+            int ret = WSASend(evfd->fd(), &request.get()->Wsabuf, 1, &sentBytes, 0,
+                &request.get()->Overlapped, NULL);
+            if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
+                error = hht_make_error_code(
+                    static_cast<std::errc>(::WSAGetLastError()));
+                return ;
+            }
+            evfd->queued_pending_request(request);
         }
 
         void tcp_conn::write(bytes::Buffer& buffer)
@@ -300,6 +329,8 @@ namespace pp {
             event_fd_->tie(shared_from_this());
             errors::error_code error;
             evfd->enable_read(error, std::bind(&tcp_conn::start_read, this, std::placeholders::_1));
+            evfd->enable_write(error, std::bind(&tcp_conn::start_write, this, 
+                std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
             if (error.value() == 0) {
             }
         }

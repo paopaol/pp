@@ -15,11 +15,8 @@ namespace pp {
 
         class Buffer {
         public:
-            //friend BufferRef  NewBuffer();
-
-
             Buffer();
-            ~Buffer() { /*printf("ddddddddddddddddddd\n")*/; }
+            ~Buffer() {}
           
 
             //Read All
@@ -103,11 +100,6 @@ namespace pp {
             size_t                      widx;
         };
 
-        //BufferRef NewBuffer();
-      //  {
-            //BufferRef b = std::make_shared<Buffer>();
-            //return b;
-      //  }
     }
 }
 

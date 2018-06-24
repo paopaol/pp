@@ -58,6 +58,7 @@ namespace net {
         void handle_error(const errors::error_code& error);
         int write(const void* data, int len, errors::error_code& error);
         void start_read(errors::error_code &error);
+        void start_write(const void* data, int len, errors::error_code &error);
 
         void shutdown_in_loop();
 
