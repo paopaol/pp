@@ -23,13 +23,13 @@ namespace pp {
             , remote_("", -1)
             , local_("", -1)
         {
-            event_fd_->set_read_handler([&](errors::error_code &error) {
+            event_fd_->data_recved([&](errors::error_code &error) {
                 handle_read(error);
             });
             event_fd_->set_write_handler([&](errors::error_code &error) {
                 handle_write(error);
             });
-            event_fd_->set_close_handler([&](errors::error_code &error) {
+            event_fd_->disconnected([&](errors::error_code &error) {
                 handle_close(error);
             });
             event_fd_->set_error_handler([&](errors::error_code &error) {
@@ -41,12 +41,12 @@ namespace pp {
         }
 
 
-        void tcp_conn::set_connect_handler(const connection_handler &handler)
+        void tcp_conn::connected(const connection_handler &handler)
         {
             connection_handler_ = handler;
         }
 
-        void tcp_conn::set_read_handler(const message_handler &handler)
+        void tcp_conn::data_recved(const message_handler &handler)
         {
             msg_read_handler_ = handler;
         }
@@ -56,7 +56,7 @@ namespace pp {
             msg_write_handler_ = handler;
         }
 
-        void tcp_conn::set_close_handler(const close_handler &handler)
+        void tcp_conn::disconnected(const close_handler &handler)
         {
             close_handler_ = handler;
         }

@@ -25,14 +25,14 @@ public:
         accpeter_.set_new_conn_handler([&](int fd) { OnConnection(fd); });
     }
 
-    void SetOnConnectionHandler(const net::connection_handler& handler)
+    void new_connection(const net::connection_handler& handler)
     {
-        newConntionHandler_ = handler;
+        handle_new_conn = handler;
     }
 
-    void SetOnMessageHandler(const net::message_handler& handler)
+    void message_recved(const net::message_handler& handler)
     {
-        socketMessageHandler_ = handler;
+        handle_recved_data = handler;
     }
 
     bool Start(errors::error_code& error)
@@ -49,16 +49,12 @@ private:
     {
         errors::error_code error;
 
-        net::tcp_conn_ref conn =
-            std::make_shared<net::tcp_conn>(loop_, fd);
+        net::tcp_conn_ref conn = std::make_shared<net::tcp_conn>(loop_, fd);
         connList_[conn->remote_addr(error).string()] = conn;
 
-        int a = conn.use_count();
-        conn->set_connect_handler(newConntionHandler_);
-        a = conn.use_count();
-        conn->set_read_handler(socketMessageHandler_);
-        a = conn.use_count();
-        conn->set_close_handler(
+        conn->connected(handle_new_conn);
+        conn->data_recved(handle_recved_data);
+        conn->disconnected(
             [&](const net::tcp_conn_ref& conn) { removeFromConnList(conn); });
         conn->connect_established();
     }
@@ -82,17 +78,17 @@ private:
     std::string tcpServerName_;
     net::addr   bindAddr_;
 
-    net::connection_handler    newConntionHandler_;
-    net::message_handler socketMessageHandler_;
+    net::connection_handler    handle_new_conn;
+    net::message_handler handle_recved_data;
 };
 
 int main(int argc, char* argv)
 {
     io::event_loop     loop;
     errors::error_code error;
-    TcpServer          server(&loop, net::addr("0.0.0.0", 9001), "echo");
+    TcpServer          server(&loop, net::addr("0.0.0.0", 8080), "echo");
 
-    server.SetOnConnectionHandler(
+    server.new_connection(
         [&](const net::tcp_conn_ref& conn, const _time::Time& time) {
             errors::error_code error;
             if (!conn->connected()) {
@@ -106,7 +102,7 @@ int main(int argc, char* argv)
 
         });
 
-    server.SetOnMessageHandler([&](const net::tcp_conn_ref& conn,
+    server.message_recved([&](const net::tcp_conn_ref& conn,
                                    bytes::Buffer&           message,
                                    const _time::Time&       time) {
         Slice s;

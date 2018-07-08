@@ -11,8 +11,6 @@
 
 using namespace std;
 
-
-
 namespace pp {
 namespace io {
 
@@ -20,27 +18,28 @@ namespace io {
     {
     }
 
-    void iocp_event_fd::enable_accpet(errors::error_code &error, 
-        const accpet_done_handler &handler)
+    void iocp_event_fd::enable_accpet(errors::error_code&         error,
+                                      const start_accpet_handler& start_handler,
+                                      const accpet_done_handler&  done_handler)
     {
         enabled_event_ |= iocp_event_fd::EV_ACCPET;
+        start_accpet_       = start_handler;
+        handle_accpet_done_ = done_handler;
         event_loop_->update_event_fd(this, error);
-        accpet_event_handler_ = handler;
     }
 
-    void iocp_event_fd::enable_read(errors::error_code& error,
-        const start_read_handler &read_handler)
+    void iocp_event_fd::enable_read(errors::error_code&       error,
+                                    const start_read_handler& read_handler)
     {
         start_read_ = read_handler;
         event_fd::enable_read(error);
     }
 
-    void iocp_event_fd::enable_write(errors::error_code& error,
-        const start_write_handler &write_handler)
+    void iocp_event_fd::enable_write(errors::error_code&        error,
+                                     const start_write_handler& write_handler)
     {
         start_write_ = write_handler;
     }
-
 
 #if 0
     void iocp_event_fd::enable_wakeup(errors::error_code& error)
@@ -50,15 +49,11 @@ namespace io {
     }
 #endif
 
-
-
-
-
     void iocp_event_fd::post_read(errors::error_code& error)
     {
         if (start_read_) {
             start_read_(error);
-         }
+        }
     }
 
     int iocp_event_fd::handle_zero_done()
@@ -84,9 +79,10 @@ namespace io {
     int iocp_event_fd::handle_accept_done()
     {
         set_active(iocp_event_fd::EV_ACCPET);
+        errors::error_code error;
 
-        if (accpet_event_handler_) {
-            accpet_event_handler_();
+        if (handle_accpet_done_) {
+            handle_accpet_done_(error);
         }
         return 0;
     }
@@ -100,17 +96,18 @@ namespace io {
             handle_zero_done();
             return 0;
         }
-        assert(active_pending_req_ != nullptr);
         active_pending_req_->IoOpt = iocp_event_fd::EV_WRITE;
         active_pending_req_->SentBytes += active_pending_req_->IoSize;
         if (active_pending_req_->SentBytes < active_pending_req_->TotalBytes) {
-            //FIXME:need test
-            const char *data = active_pending_req_->Buffer
-                + active_pending_req_->SentBytes;
+            // FIXME:need test
+            const char* data =
+                active_pending_req_->Buffer + active_pending_req_->SentBytes;
             int len = active_pending_req_->TotalBytes
-                - active_pending_req_->SentBytes;
-           post_write((const char *)data, len,
-               std::bind(start_write_, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), error);
+                      - active_pending_req_->SentBytes;
+            post_write(( const char* )data, len,
+                       std::bind(start_write_, std::placeholders::_1,
+                                 std::placeholders::_2, std::placeholders::_3),
+                       error);
         }
         else {
             set_active(iocp_event_fd::EV_WRITE);
@@ -139,51 +136,15 @@ namespace io {
         }
     }
 
-    int iocp_event_fd::post_write(const char *data, int len,
-        const start_write_handler &write_handler, errors::error_code &error)
+    int iocp_event_fd::post_write(const char* data, int len,
+                                  const start_write_handler& write_handler,
+                                  errors::error_code&        error)
     {
         if (write_handler) {
             write_handler(data, len, error);
-          }
-#if 0
-        DWORD sentBytes = 0;
-
-        io_request_ref request = create_io_request(iocp_event_fd::EV_WRITE);
-        memcpy(request.get()->Wsabuf.buf, data, len);
-        request.get()->Wsabuf.len = len;
-        request.get()->TotalBytes = len;
-
-        int ret = WSASend(fd_, &request.get()->Wsabuf, 1, &sentBytes, 0,
-                          &request.get()->Overlapped, NULL);
-        if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
-            error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
-            return -1;
         }
-        queued_pending_request(request);
-#endif
         return 0;
     }
-
-    static LPFN_ACCEPTEX acceptEx = NULL;
-
-    class IocpAccpeterFuncGetter {
-    public:
-        IocpAccpeterFuncGetter(int fd)
-        {
-            int   ret           = 0;
-            DWORD bytes         = 0;
-            GUID  acceptex_guid = WSAID_ACCEPTEX;
-            system::call_once(flag, [&] {
-                ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
-                               &acceptex_guid, sizeof(acceptex_guid), &acceptEx,
-                               sizeof(acceptEx), &bytes, NULL, NULL);
-            });
-        }
-
-    private:
-        system::once_flag flag;
-    };
 
     iocp_event_fd::io_request_ref iocp_event_fd::create_io_request(int ev)
     {
@@ -220,28 +181,10 @@ namespace io {
 
     int iocp_event_fd::post_accpet(errors::error_code& error)
     {
-        DWORD                         recvBytes = 0;
-        int                           ret       = 0;
-        static IocpAccpeterFuncGetter iocpAccpeterFuncGetter(fd());
-
-        int accept_socket = net::newsocket(AF_INET, SOCK_STREAM, error);
-        hht_return_if_error(error, -1);
-
-        io_request_ref request = create_io_request(iocp_event_fd::EV_ACCPET);
-
-        ret = acceptEx(fd(), accept_socket, (LPVOID)(request->Buffer), 0,
-                       sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE),
-                       &recvBytes, (LPOVERLAPPED) & (request->Overlapped));
-
-        if (!SUCCEEDED_WITH_IOCP(ret)) {
-            error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
-            closesocket(accept_socket);
-            return -1;
+        if (start_accpet_) {
+            start_accpet_(error);
         }
-        queued_pending_request(request);
-        request->AccpetFd = accept_socket;
         return 0;
     }
-}
-}
+}  // namespace io
+}  // namespace pp

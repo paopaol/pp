@@ -4,9 +4,15 @@
 
 #include <fmt/fmt.h>
 
-#include "windows/sys_win_thread_local_storage.h"
-
 #ifdef WIN32
+#if !defined(WIN32_LEAN_AND_MEAN) && (_WIN32_WINNT >= 0x0400) \
+    && !defined(USING_WIN_PSDK)
+#include <windows.h>
+#else
+#include <Windows.h>
+#include <winsock2.h>
+#endif
+#include "windows/sys_win_thread_local_storage.h"
 #include <windows/io_win_iocp_poller.h>
 #endif
 #include <system/sys_thread.h>
@@ -24,9 +30,9 @@ namespace io {
         : tid_(system::this_thread::get_id()), execing_(false),
           event_poller_(new event_poller), exit_(false)
 #ifdef WIN32
-          //,
-         // wakeup_pipe_(fmt::Sprintf("\\\\.\\pipe\\wakeuppipe%d", tid_).c_str()),
-          // wakeup_ev_fd_(new iocp_event_fd(this, wakeup_pipe_.fd()))
+    //,
+    // wakeup_pipe_(fmt::Sprintf("\\\\.\\pipe\\wakeuppipe%d", tid_).c_str()),
+    // wakeup_ev_fd_(new iocp_event_fd(this, wakeup_pipe_.fd()))
     {
         std::cerr << error.full_message() << std::endl;
         assert(error.value() == 0);
@@ -49,8 +55,9 @@ namespace io {
             Poller_->remove_event_fd(event, error);
         };
 #ifdef WIN32
-      //  iocp_event_fd* event = static_cast<iocp_event_fd*>(wakeup_ev_fd_.get());
-       // event->enable_wakeup(error);
+        //  iocp_event_fd* event =
+        //  static_cast<iocp_event_fd*>(wakeup_ev_fd_.get());
+        // event->enable_wakeup(error);
 #endif
 
         thread_local_storage_init();
@@ -142,5 +149,5 @@ namespace io {
             wakeup();
         }
     }
-}
-}
+}  // namespace io
+}  // namespace pp

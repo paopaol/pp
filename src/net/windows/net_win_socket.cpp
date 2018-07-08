@@ -159,14 +159,15 @@ namespace pp {
         {
             addr addr;
 
-            struct sockaddr_in sa;
+            struct sockaddr_in sa[2];
             int len = sizeof(sa);
             if (getpeername(fd_, (struct sockaddr *)&sa, &len) == 0) {
-                addr.Ip = inet_ntoa(sa.sin_addr);
-                addr.Port = ntohs(sa.sin_port);
+                addr.Ip = inet_ntoa(sa[0].sin_addr);
+                addr.Port = ntohs(sa[0].sin_port);
             }
             else {
-				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));
+				int e = ::WSAGetLastError();
+				error = hht_make_error_code(static_cast<std::errc>(e));
             }
             return addr;   
         }
@@ -174,11 +175,11 @@ namespace pp {
         addr socket::local_addr(errors::error_code &error)
         {
             addr addr;
-            struct sockaddr_in sa;
+            struct sockaddr_in sa[2];
             int len = sizeof(sa);
             if (getsockname(fd_, (struct sockaddr *)&sa, &len) == 0) {
-                addr.Ip = inet_ntoa(sa.sin_addr);
-                addr.Port = ntohs(sa.sin_port);
+                addr.Ip = inet_ntoa(sa[0].sin_addr);
+                addr.Port = ntohs(sa[0].sin_port);
             }
             else {
 				error = hht_make_error_code(static_cast<std::errc>(::WSAGetLastError()));

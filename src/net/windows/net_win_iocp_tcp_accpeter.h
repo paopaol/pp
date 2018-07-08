@@ -16,6 +16,7 @@ namespace net {
         void set_new_conn_handler(const new_conn_handler& handler);
         int  bind(const addr& addr, errors::error_code& error);
         int  listen(errors::error_code& error);
+        int  start_accpet(errors::error_code& error);
 
     private:
         void accpet_done();
@@ -25,7 +26,7 @@ namespace net {
 
         io::event_loop*    loop_;
         socket             socket_;
-        io::iocp_event_fd  listen_fd_;
+        io::event_fd_ref   listen_fd_;
         new_conn_handler   new_conn_handler_;
         errors::error_code error_;
         int                type_;

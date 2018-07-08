@@ -10,7 +10,7 @@
 
 #include <WinSock2.h>
 #include <Windows.h>
-#include <MSWSock.h>
+//#include <MSWSock.h>
 #endif
 
 #include <map>

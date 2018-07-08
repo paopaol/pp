@@ -5,3 +5,7 @@ yicao.files
 yicao.includes
 yicao.config
 build
+.cquery_cached_index
+GPATH
+GRTAGS
+GTAGS

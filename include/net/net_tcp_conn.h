@@ -15,9 +15,9 @@ namespace net {
     typedef std::function<void(const net::tcp_conn_ref& conn)> error_handler;
     typedef std::function<void(const net::tcp_conn_ref& conn)> close_handler;
 
-    typedef std::function<void(const net::tcp_conn_ref, const _time::Time&)>
+    typedef std::function<void(const net::tcp_conn_ref&, const _time::Time&)>
         connection_handler;
-    typedef std::function<void(const net::tcp_conn_ref, bytes::Buffer&,
+    typedef std::function<void(const net::tcp_conn_ref&, bytes::Buffer&,
                                const _time::Time&)>
         message_handler;
 
@@ -30,11 +30,11 @@ namespace net {
         ~tcp_conn()
         {
         }
-        void set_connect_handler(const connection_handler& handler);
-        void set_read_handler(const message_handler& handler);
+        void connected(const connection_handler& handler);
+        void data_recved(const message_handler& handler);
         void set_write_handler(const message_handler& handler);
         // void set_error_handler(const error_handler &handler);
-        void set_close_handler(const close_handler& handler);
+        void disconnected(const close_handler& handler);
 
         void write(const void* data, int len);
         void write(bytes::Buffer& buffer);

@@ -15,7 +15,7 @@ namespace io {
         handler_write_ = handler;
     }
 
-    void event_fd::set_read_handler(const event_handler& handler)
+    void event_fd::data_recved(const event_handler& handler)
     {
         handler_read_ = handler;
     }
@@ -26,7 +26,7 @@ namespace io {
         handler_error_ = handler;
     }
 
-    void event_fd::set_close_handler(const event_handler& handler)
+    void event_fd::disconnected(const event_handler& handler)
     {
         handler_close_ = handler;
     }
