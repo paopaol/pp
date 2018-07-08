@@ -82,6 +82,13 @@ namespace io {
         }
     }
 
+	void iocp_poller::wakeup()
+	{
+		assert(m_iocp);
+
+		::PostQueuedCompletionStatus(m_iocp, 0, (ULONG_PTR)m_iocp, NULL);
+	}
+
     int iocp_poller::poll(int timeoutms, event_fd_list& gotEvents,
                           errors::error_code& error)
     {
@@ -94,12 +101,18 @@ namespace io {
         ULONG_PTR       unused_key     = NULL;
 
         BOOL success =
-            GetQueuedCompletionStatus(m_iocp, &iosize, &unused_key,
+            ::GetQueuedCompletionStatus(m_iocp, &iosize, &unused_key,
                                       ( LPOVERLAPPED* )&overlapped, timeoutms);
+		//wakeup event,do nothing, just return
+		if (unused_key == (ULONG_PTR)m_iocp) {
+			return 0;
+		}
+
         if (!overlapped && (ecode = ::GetLastError()) != WAIT_TIMEOUT) {
             error = hht_make_error_code(static_cast<std::errc>(ecode));
             return -1;
         }
+
         active_req = CONTAINING_RECORD(overlapped, io_request_t, Overlapped);
 
         iocp_event_fd* event_fd =

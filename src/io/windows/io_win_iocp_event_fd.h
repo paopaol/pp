@@ -33,8 +33,8 @@ namespace io {
 
         static const int EV_ACCPET = event_fd::EV_ERROR
                                      << 1;  // only for windows
-        // static const int EV_WAKEUP = iocp_event_fd::EV_ACCPET << 1; //only
-        // for windows
+		//only for windows
+        static const int EV_WAKEUP = iocp_event_fd::EV_ACCPET << 1;
 
         iocp_event_fd(event_loop* loop, int fd);
         ~iocp_event_fd() {}

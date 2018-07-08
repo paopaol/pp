@@ -36,7 +36,7 @@ namespace pp {
       iocp_poller &operator=(iocp_poller&);
 
 
-     
+
 
 
       iocp_poller_private *private_;

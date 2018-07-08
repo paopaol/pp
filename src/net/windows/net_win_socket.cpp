@@ -24,6 +24,9 @@ namespace pp {
                 WSADATA wsaData;
                 WSAStartup(MAKEWORD(2, 2), &wsaData);
             }
+			~WsasocketIniter() {
+				WSACleanup();
+			}
         };
 
         static  WsasocketIniter wsa_socket_initer;

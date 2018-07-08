@@ -30,35 +30,30 @@ namespace io {
         : tid_(system::this_thread::get_id()), execing_(false),
           event_poller_(new event_poller), exit_(false)
 #ifdef WIN32
-    //,
-    // wakeup_pipe_(fmt::Sprintf("\\\\.\\pipe\\wakeuppipe%d", tid_).c_str()),
-    // wakeup_ev_fd_(new iocp_event_fd(this, wakeup_pipe_.fd()))
     {
         std::cerr << error.full_message() << std::endl;
         assert(error.value() == 0);
-        std::shared_ptr<iocp_poller> Poller_ = std::make_shared<iocp_poller>();
+        std::shared_ptr<iocp_poller> poller_ = std::make_shared<iocp_poller>();
 
 #endif
 
-        event_poller_->Poll = [Poller_](int                 timeoutms,
+        event_poller_->poll = [poller_](int                 timeoutms,
                                         event_fd_list&      gotEventFds,
                                         errors::error_code& error) {
-            return Poller_->poll(timeoutms, gotEventFds, error);
+            return poller_->poll(timeoutms, gotEventFds, error);
         };
 
-        event_poller_->update_event_fd = [Poller_](event_fd*           event,
+        event_poller_->update_event_fd = [poller_](event_fd*           event,
                                                    errors::error_code& error) {
-            Poller_->update_event_fd(event, error);
+            poller_->update_event_fd(event, error);
         };
-        event_poller_->remove_event_fd = [Poller_](event_fd*           event,
+        event_poller_->remove_event_fd = [poller_](event_fd*           event,
                                                    errors::error_code& error) {
-            Poller_->remove_event_fd(event, error);
+            poller_->remove_event_fd(event, error);
         };
-#ifdef WIN32
-        //  iocp_event_fd* event =
-        //  static_cast<iocp_event_fd*>(wakeup_ev_fd_.get());
-        // event->enable_wakeup(error);
-#endif
+
+		event_poller_->wakeup = [poller_]() { poller_->wakeup(); };
+
 
         thread_local_storage_init();
         assert(!thread_already_has_loop());
@@ -83,7 +78,7 @@ namespace io {
 
         while (!exit_) {
             errors::error_code error;
-            event_poller_->Poll(INFINITE, active_ev_fd_list_, error);
+            event_poller_->poll(INFINITE, active_ev_fd_list_, error);
             for (auto ev = active_ev_fd_list_.begin();
                  ev != active_ev_fd_list_.end(); ev++) {
                 (*ev)->handle_event();
@@ -128,19 +123,11 @@ namespace io {
         event_poller_->remove_event_fd(event, error);
     }
 
-#ifdef WIN32
     void event_loop::wakeup()
     {
+		event_poller_->wakeup();
 
-#if 0
-        HANDLE h = ::CreateFile(wakeup_pipe_.Name().c_str(),
-                                GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                                OPEN_EXISTING, 0, NULL);
-
-        ::CloseHandle(h);
-#endif
     }
-#endif
 
     void event_loop::quit()
     {

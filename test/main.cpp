@@ -108,6 +108,9 @@ int main(int argc, char* argv)
         Slice s;
         message.Read(s);
         std::string str(s.data(), s.size());
+		if (str == "quit\r\n") {
+			loop.quit();
+		}
         // std::cout << str << std::endl;
         std::string resp = "HTTP / 1.1 200 OK\nDate:Sat, 31 Dec 2005 23:59:59 "
                            "GMT\nContent-Type:text/html; "
