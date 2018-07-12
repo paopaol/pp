@@ -35,6 +35,11 @@ void loopPopFromThread()
     TlsSetValue(index, 0);
 }
 
+void *loop_curren_thread_loop()
+{
+	return TlsGetValue(index);
+}
+
 
 namespace pp {
     namespace io {

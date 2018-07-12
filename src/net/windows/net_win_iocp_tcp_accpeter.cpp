@@ -10,7 +10,7 @@ using namespace std;
 
 namespace pp {
 namespace net {
-    static LPFN_ACCEPTEX acceptEx = NULL;
+    static LPFN_ACCEPTEX accpet_ex = NULL;
 
     class windows_ex_func_initer {
     public:
@@ -20,9 +20,10 @@ namespace net {
             DWORD bytes         = 0;
             GUID  acceptex_guid = WSAID_ACCEPTEX;
             system::call_once(flag, [&] {
-                ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
-                               &acceptex_guid, sizeof(acceptex_guid), &acceptEx,
-                               sizeof(acceptEx), &bytes, NULL, NULL);
+                ret =
+                    WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
+                             &acceptex_guid, sizeof(acceptex_guid), &accpet_ex,
+                             sizeof(accpet_ex), &bytes, NULL, NULL);
                 assert(ret == 0
                        && "WSAIoctl(SIO_GET_EXTENSION_FUNCTION_POINTER)");
             });
@@ -73,8 +74,8 @@ namespace net {
 
     int win_iocp_tcp_accpeter::start_accpet(errors::error_code& error)
     {
-        DWORD recvBytes = 0;
-        int   ret       = 0;
+        DWORD recv_bytes = 0;
+        int   ret        = 0;
 
         auto evfd = static_cast<io::iocp_event_fd*>(listen_fd_.get());
         static windows_ex_func_initer ex_func_init(evfd->fd());
@@ -84,9 +85,9 @@ namespace net {
 
         auto request = evfd->create_io_request(io::iocp_event_fd::EV_ACCPET);
 
-        ret = acceptEx(evfd->fd(), accept_socket, (LPVOID)(request->Buffer), 0,
-                       sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE),
-                       &recvBytes, (LPOVERLAPPED) & (request->Overlapped));
+        ret = accpet_ex(evfd->fd(), accept_socket, (LPVOID)(request->Buffer), 0,
+                        sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE),
+                        &recv_bytes, (LPOVERLAPPED) & (request->Overlapped));
 
         if (!SUCCEEDED_WITH_IOCP(ret)) {
             error = hht_make_error_code(

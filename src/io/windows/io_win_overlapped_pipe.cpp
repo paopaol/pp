@@ -41,8 +41,8 @@ namespace io {
             TEXT(name), PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
             PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE,
             PIPE_UNLIMITED_INSTANCES,  // number of instances
-            65535,       // output buffer size
-            65535,       // input buffer size
+            65535,                     // output buffer size
+            65535,                     // input buffer size
             0,                         // client time-out
             NULL);
         if (h == INVALID_HANDLE_VALUE) {
@@ -60,5 +60,5 @@ namespace io {
         }
         return h;
     }
-}
-}
+}  // namespace io
+}  // namespace pp

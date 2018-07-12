@@ -5,6 +5,7 @@
 #include <io/io_event_fd.h>
 #include <net/net.h>
 #include <time/_time.h>
+#include <container/any.h>
 
 #include <memory>
 
@@ -51,6 +52,16 @@ namespace net {
         addr local_addr(errors::error_code& error);
         void enable_read(errors::error_code& error);
 
+		void set_user_data(const pp::Any &any)
+		{
+			user_data_ = any;
+		}
+
+		pp::Any user_data()
+		{
+			return user_data_;
+		}
+
     private:
         void handle_read(errors::error_code& error);
         void handle_write(errors::error_code& error);
@@ -77,6 +88,7 @@ namespace net {
         ConnStatus         state;
         addr               remote_;
         addr               local_;
+		pp::Any			   user_data_;
     };
 }
 }

@@ -27,8 +27,11 @@ namespace pp {
 namespace io {
 
     event_loop::event_loop()
-        : tid_(system::this_thread::get_id()), execing_(false),
-          event_poller_(new event_poller), exit_(false)
+        : tid_(system::this_thread::get_id()),
+          execing_(false),
+          event_poller_(new event_poller),
+          exit_(false),
+          timer_queue_(std::make_shared<_time::timer_queue>())
 #ifdef WIN32
     {
         std::cerr << error.full_message() << std::endl;
@@ -52,8 +55,7 @@ namespace io {
             poller_->remove_event_fd(event, error);
         };
 
-		event_poller_->wakeup = [poller_]() { poller_->wakeup(); };
-
+        event_poller_->wakeup = [poller_]() { poller_->wakeup(); };
 
         thread_local_storage_init();
         assert(!thread_already_has_loop());
@@ -77,8 +79,10 @@ namespace io {
         execing_ = true;
 
         while (!exit_) {
+            int next_timeout =
+                static_cast<int>(timer_queue_->handle_timeout_timer());
             errors::error_code error;
-            event_poller_->poll(INFINITE, active_ev_fd_list_, error);
+            event_poller_->poll(next_timeout, active_ev_fd_list_, error);
             for (auto ev = active_ev_fd_list_.begin();
                  ev != active_ev_fd_list_.end(); ev++) {
                 (*ev)->handle_event();
@@ -125,8 +129,7 @@ namespace io {
 
     void event_loop::wakeup()
     {
-		event_poller_->wakeup();
-
+        event_poller_->wakeup();
     }
 
     void event_loop::quit()
@@ -135,6 +138,10 @@ namespace io {
         if (!in_created_thread()) {
             wakeup();
         }
+    }
+    _time::timer_queue_ref event_loop::get_timer_queue()
+    {
+        return timer_queue_;
     }
 }  // namespace io
 }  // namespace pp

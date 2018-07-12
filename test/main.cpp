@@ -19,8 +19,7 @@ class TcpServer {
 public:
     TcpServer(io::event_loop* loop, const net::addr& addr,
               const std::string& name)
-        : loop_(loop), accpeter_(loop), bindAddr_(addr),
-          tcpServerName_(name)
+        : loop_(loop), accpeter_(loop), bindAddr_(addr), tcpServerName_(name)
     {
         accpeter_.set_new_conn_handler([&](int fd) { OnConnection(fd); });
     }
@@ -72,14 +71,14 @@ private:
         int i = conn.use_count();
     }
 
-    io::event_loop*        loop_;
-    net::win_iocp_tcp_accpeter accpeter_;
+    io::event_loop*                          loop_;
+    net::win_iocp_tcp_accpeter               accpeter_;
     std::map<std::string, net::tcp_conn_ref> connList_;
-    std::string tcpServerName_;
-    net::addr   bindAddr_;
+    std::string                              tcpServerName_;
+    net::addr                                bindAddr_;
 
-    net::connection_handler    handle_new_conn;
-    net::message_handler handle_recved_data;
+    net::connection_handler handle_new_conn;
+    net::message_handler    handle_recved_data;
 };
 
 int main(int argc, char* argv)
@@ -96,31 +95,47 @@ int main(int argc, char* argv)
                           << " closed" << std::endl;
                 return;
             }
+
             std::cout << time.String()
                       << "  remote:" << conn->remote_addr(error).string()
                       << "connected" << std::endl;
-
         });
 
     server.message_recved([&](const net::tcp_conn_ref& conn,
-                                   bytes::Buffer&           message,
-                                   const _time::Time&       time) {
+                              bytes::Buffer& message, const _time::Time& time) {
         Slice s;
         message.Read(s);
         std::string str(s.data(), s.size());
-		if (str == "quit\r\n") {
-			loop.quit();
-		}
+        if (str == "quit\r\n") {
+            loop.quit();
+        }
         // std::cout << str << std::endl;
         std::string resp = "HTTP / 1.1 200 OK\nDate:Sat, 31 Dec 2005 23:59:59 "
                            "GMT\nContent-Type:text/html; "
                            "charset=ISO-8859-1\n\n<html><head><title>Wrox "
                            "Homepage</title></head><body><!--body goes here "
-                           "--><p>hello pp</p></body></html>";
+                           "--><p>hello pp</p></body></html>\n";
 
-        conn->write(resp.data(), resp.size());
-        conn->shutdown();
+        for (int i = 1; i < 4; i++) {
+            std::cout << "install timer" << i << std::endl;
+            _time::new_timer(_time::timer::oneshot, _time::Second * 5 * i,
+                             [&, i, conn, resp]() {
+                                 std::cout << i << "seconds timeout"
+                                           << std::endl;
+                                 conn->write(resp.data(), resp.length());
+                             });
+        }
+
+        _time::new_timer(_time::timer::oneshot, _time::Second * 20,
+                         [&, conn]() {
+                             std::cout << 20 << "close client" << std::endl;
+                             conn->shutdown();
+                             loop.quit();
+                         });
     });
+
+    _time::new_timer(_time::timer::interval, _time::Second * 1,
+                     [&]() { std::cout << "interval ticks" << std::endl; });
 
     server.Start(error);
     loop.exec();

@@ -13,6 +13,7 @@ if(NOT DISABLED_TEST)
 endif()
 include_directories(include)
 include_directories(src/system)
+include_directories(src/time)
 
 # auto create libcurl dir in ${PROJECT_BINARY_DIR}
 #link_directories(${PROJECT_BINARY_DIR}/libcurl/lib)
@@ -48,7 +49,7 @@ if(IS_WIN)
     src/io/windows/io_win_iocp_poller.h
     #src/io/windows/io_win_overlapped_pipe.cpp
     #src/io/windows/io_win_overlapped_pipe.h
-    
+
     #src/io/windows/io_win_iocp_pipe_event_fd.cpp
     #src/io/windows/io_win_iocp_pipe_event_fd.h
     #src/io/windows/io_win_iocp_tcp_event_fd.cpp
@@ -93,6 +94,8 @@ set(bytes-src-list
 ###time
 set(time-src-list
   src/time/time.cpp
+  src/time/timer.cpp
+  src/time/timer_queue.cpp
   )
 if(IS_WIN)
   set(time-src-list

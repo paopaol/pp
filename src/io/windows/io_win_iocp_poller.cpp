@@ -108,6 +108,11 @@ namespace io {
 			return 0;
 		}
 
+		//maybe timeout occured
+		if (!overlapped) {
+			return 0;
+		}
+
         if (!overlapped && (ecode = ::GetLastError()) != WAIT_TIMEOUT) {
             error = hht_make_error_code(static_cast<std::errc>(ecode));
             return -1;
