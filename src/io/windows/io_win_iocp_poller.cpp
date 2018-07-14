@@ -82,36 +82,36 @@ namespace io {
         }
     }
 
-	void iocp_poller::wakeup()
-	{
-		assert(m_iocp);
+    void iocp_poller::wakeup()
+    {
+        assert(m_iocp);
 
-		::PostQueuedCompletionStatus(m_iocp, 0, (ULONG_PTR)m_iocp, NULL);
-	}
+        ::PostQueuedCompletionStatus(m_iocp, 0, ( ULONG_PTR )m_iocp, NULL);
+    }
 
-    int iocp_poller::poll(int timeoutms, event_fd_list& gotEvents,
+    int iocp_poller::poll(int timeoutms, event_fd_list& active_event_list,
                           errors::error_code& error)
     {
         assert(m_iocp);
 
-        DWORD           iosize        = 0;
-        LPWSAOVERLAPPED overlapped    = NULL;
+        DWORD           iosize     = 0;
+        LPWSAOVERLAPPED overlapped = NULL;
         io_request_t*   active_req = NULL;
-        int             ecode         = 0;
-        ULONG_PTR       unused_key     = NULL;
+        int             ecode      = 0;
+        ULONG_PTR       unused_key = NULL;
 
-        BOOL success =
-            ::GetQueuedCompletionStatus(m_iocp, &iosize, &unused_key,
-                                      ( LPOVERLAPPED* )&overlapped, timeoutms);
-		//wakeup event,do nothing, just return
-		if (unused_key == (ULONG_PTR)m_iocp) {
-			return 0;
-		}
+        BOOL success = ::GetQueuedCompletionStatus(m_iocp, &iosize, &unused_key,
+                                                   ( LPOVERLAPPED* )&overlapped,
+                                                   timeoutms);
+        // wakeup event,do nothing, just return
+        if (unused_key == ( ULONG_PTR )m_iocp) {
+            return 0;
+        }
 
-		//maybe timeout occured
-		if (!overlapped) {
-			return 0;
-		}
+        // maybe timeout occured
+        if (!overlapped) {
+            return 0;
+        }
 
         if (!overlapped && (ecode = ::GetLastError()) != WAIT_TIMEOUT) {
             error = hht_make_error_code(static_cast<std::errc>(ecode));
@@ -130,5 +130,5 @@ namespace io {
 
         return 0;
     }
-}
-}
+}  // namespace io
+}  // namespace pp

@@ -8,8 +8,10 @@
 #include <windows/io_win_iocp_event_fd.h>
 
 namespace pp {
+	namespace io{
+		class io::event_loop;
+	}
 namespace net {
-    class io::event_loop;
     class win_iocp_tcp_accpeter {
     public:
         win_iocp_tcp_accpeter(io::event_loop* loop);

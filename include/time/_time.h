@@ -5,28 +5,26 @@
 #ifndef PP_TIME_H
 #define PP_TIME_H
 
-#include <queue>
 #include <functional>
+#include <memory>
+#include <queue>
 #include <stdint.h>
 #include <string>
 #include <sys/types.h>
-#include <stdint.h>
-#include <memory>
 
-namespace pp{
-	namespace io {
-		class event_loop;
-	}
+namespace pp {
+namespace io {
+    class event_loop;
 }
-
+}  // namespace pp
 
 namespace pp {
 namespace _time {
     typedef int64_t Duration;
 
     const Duration Nanosecond  = 1;
-     const Duration Microsecond = 1000 * Nanosecond;
-	const Duration Millisecond = 1000 * Microsecond;
+    const Duration Microsecond = 1000 * Nanosecond;
+    const Duration Millisecond = 1000 * Microsecond;
     const Duration Second      = 1000 * Millisecond;
     const Duration Minute      = 60 * Second;
     const Duration Hour        = 60 * Minute;
@@ -75,7 +73,7 @@ namespace _time {
     class Time {
     public:
         Time();
-		Time(const Time &t);
+        Time(const Time& t);
 
         bool After(Time u);
 
@@ -95,14 +93,14 @@ namespace _time {
         int     Minute();
         int     Second();
         int     Nanosecond();
-		int64_t Millisecond();
+        int64_t Millisecond();
 
         int YearDay();
 
         std::string Format(std::string layout);
         std::string String() const;
 
-		Time &operator=(const Time &t);
+        Time& operator=(const Time& t);
 
     private:
         int64_t sec;
@@ -114,56 +112,51 @@ namespace _time {
 
     Time Now();
 
-   
-	class timer;
-    typedef std::function<void()> timer_handler;
-	typedef std::shared_ptr<timer> timer_ref;
-    class timer : public std::enable_shared_from_this<timer>{
-	public:
-		enum timer_behavior { interval, oneshot };
+    class timer;
+    typedef std::function<void()>  timer_handler;
+    typedef std::shared_ptr<timer> timer_ref;
+    class timer : public std::enable_shared_from_this<timer> {
+    public:
+        enum timer_behavior { interval, oneshot };
 
         void cancel();
-		int64_t future();
-		timer_behavior behavior();
-		~timer() {};
-		friend struct timer_cmper;
-	
-		friend timer_ref new_timer(timer::timer_behavior be, Duration when,
-			const timer_handler& func);
-	private:
+		bool canceled();
+        int64_t        future();
+        timer_behavior behavior();
+        ~timer(){};
+        friend struct timer_cmper;
 
-		 explicit timer(timer_behavior be, int64_t when,
-			const timer_handler& func, io::event_loop* loop);
+        friend timer_ref new_timer(timer::timer_behavior be, Duration when,
+                                   const timer_handler& func);
 
+    private:
+        explicit timer(timer_behavior be, int64_t when,
+                       const timer_handler& func, io::event_loop* loop);
 
         friend class timer_queue;
-		//friend class io::event_loop;
-      
-        void run_timeout();
+        // friend class io::event_loop;
 
+        void run_timeout();
 
         timer(const timer& other);
         timer& operator=(const timer& other);
-       
 
         timer_handler func_;
         // when timer handler need run, ms
-		Duration when_;
-		int64_t future_;
+        Duration when_;
+        int64_t  future_;
+        bool     canceled_;
         // behavior of timer, interval/oneshot
-		timer_behavior         how_;
-		io::event_loop* loop_;
+        timer_behavior  how_;
+        io::event_loop* loop_;
     };
 
-	struct timer_cmper {
-		bool operator()(timer_ref a, timer_ref b) {
-			return a->future_ > b->future_;
-		}
-	};
-
-
-
-
+    struct timer_cmper {
+        bool operator()(timer_ref a, timer_ref b)
+        {
+            return a->future_ > b->future_;
+        }
+    };
 
     // one timer_queue per thread
     // we will use thread local data create it
@@ -173,24 +166,23 @@ namespace _time {
         timer_queue();
 
         //! Destructor
-		 ~timer_queue() {};
+        ~timer_queue(){};
 
         // if timer already exit, update it
         void      push(const timer_ref& timer);
         void      pop();
         timer_ref top();
-		int64_t handle_timeout_timer();
-		int64_t next_timeout();
-		int size();
+        int64_t   handle_timeout_timer();
+        int       size();
 
-        
-	private:
+    private:
         timer_queue(const timer_queue& other);
         timer_queue& operator=(const timer_queue& other);
 
-        std::priority_queue<timer_ref, std::vector<timer_ref>, timer_cmper> timer_queue_;
+        std::priority_queue<timer_ref, std::vector<timer_ref>, timer_cmper>
+            timer_queue_;
     };
-	typedef std::shared_ptr<timer_queue> timer_queue_ref;
+    typedef std::shared_ptr<timer_queue> timer_queue_ref;
 
     timer_ref new_timer(timer::timer_behavior be, int64_t when,
                         const timer_handler& func);

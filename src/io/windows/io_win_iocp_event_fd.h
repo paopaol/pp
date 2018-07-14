@@ -33,7 +33,7 @@ namespace io {
 
         static const int EV_ACCPET = event_fd::EV_ERROR
                                      << 1;  // only for windows
-		//only for windows
+                                            // only for windows
         static const int EV_WAKEUP = iocp_event_fd::EV_ACCPET << 1;
 
         iocp_event_fd(event_loop* loop, int fd);
@@ -46,9 +46,9 @@ namespace io {
                          const start_read_handler& read_handler);
         void enable_write(errors::error_code&        error,
                           const start_write_handler& write_handler);
-        // void enable_wakeup(errors::error_code &error);
 
         void handle_event();
+        void handle_event_with_guard();
         void post_read(errors::error_code& error);
         int  post_write(const char* data, int len,
                         const start_write_handler& write_handler,
@@ -82,8 +82,12 @@ namespace io {
 #define MAX_WSA_BUFF_SIZE (2 * (sizeof(SOCKADDR_STORAGE) + 16) + 5)
     struct io_request_t {
         io_request_t()
-            : TotalBytes(0), SentBytes(0), IoOpt(iocp_event_fd::EV_NONE),
-              AccpetFd(-1), IoFd(-1), IoSize(0)
+            : TotalBytes(0),
+              SentBytes(0),
+              IoOpt(iocp_event_fd::EV_NONE),
+              AccpetFd(-1),
+              IoFd(-1),
+              IoSize(0)
         {
             ZeroMemory(&Overlapped, sizeof(Overlapped));
             Wsabuf.buf = Buffer;

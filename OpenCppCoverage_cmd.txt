@@ -1,0 +1,3 @@
+OpenCppCoverage.exe  --sources d:\\root\\home\\workspace\\self\\yicao\\include --sources d:\\root\\home\\workspace\\self\\yicao\\src  --export_type=binary:main.cov    -- main.exe
+
+OpenCppCoverage.exe  --sources d:\\root\\home\\workspace\\self\\yicao\\include --sources d:\\root\\home\\workspace\\self\\yicao\\src  --export_type=binary:io_event_loop_report.cov  --input_coverage=main.cov  --export_type=html:cover    -- test_io_event_loop.exe

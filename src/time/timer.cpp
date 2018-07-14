@@ -9,11 +9,12 @@ namespace pp {
 namespace _time {
     timer::timer(timer_behavior be, int64_t when, const timer_handler& func,
                  io::event_loop* loop)
-        : loop_(loop), how_(be), when_(when), func_(func)
+        : loop_(loop), how_(be), when_(when), func_(func), canceled_(false)
     {
         assert(loop_
                && "timer create failed, not exits event loop in current "
                   "thread");
+        assert(when > 0 && "timer period can't be < 0");
         auto now = Now();
         future_  = now.Add(when).Millisecond();
         ;
@@ -23,7 +24,14 @@ namespace _time {
     {
         assert(loop_->in_created_thread()
                && "timer must cancel in it's construct thread");
-        func_ = nullptr;
+        // lazy cancel
+        func_     = nullptr;
+        canceled_ = true;
+    }
+
+    bool timer::canceled()
+    {
+        return canceled_;
     }
 
     void timer::run_timeout()

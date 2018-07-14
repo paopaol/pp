@@ -41,13 +41,6 @@ namespace io {
         start_write_ = write_handler;
     }
 
-#if 0
-    void iocp_event_fd::enable_wakeup(errors::error_code& error)
-    {
-        enabled_event_ |= iocp_event_fd::EV_WAKEUP;
-        event_loop_->update_event_fd(this, error);
-    }
-#endif
 
     void iocp_event_fd::post_read(errors::error_code& error)
     {
@@ -116,15 +109,8 @@ namespace io {
         return 0;
     }
 
-    void iocp_event_fd::handle_event()
+    void iocp_event_fd::handle_event_with_guard()
     {
-#if 0
-        if (active_pending_req_->IoOpt & iocp_event_fd::EV_WAKEUP) {
-            // handleWakeUp();
-            return;
-        }
-        else
-#endif
         if (active_pending_req_->IoOpt & iocp_event_fd::EV_READ) {
             handle_read_done();
         }
@@ -133,6 +119,21 @@ namespace io {
         }
         else if (active_pending_req_->IoOpt & iocp_event_fd::EV_WRITE) {
             handle_write_done();
+        }
+    }
+
+    void iocp_event_fd::handle_event()
+    {
+        std::shared_ptr<void> guard;
+
+        if (tied_) {
+            guard = tie_.lock();
+            if (guard) {
+                handle_event_with_guard();
+            }
+        }
+        else {
+            handle_event_with_guard();
         }
     }
 

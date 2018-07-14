@@ -60,7 +60,7 @@ namespace io {
         thread_local_storage_init();
         assert(!thread_already_has_loop());
         loopPushToThread(this);
-    }
+    }  // namespace io
 
     event_loop::~event_loop()
     {
@@ -86,6 +86,12 @@ namespace io {
             for (auto ev = active_ev_fd_list_.begin();
                  ev != active_ev_fd_list_.end(); ev++) {
                 (*ev)->handle_event();
+            }
+            for (auto functor = func_list_.begin(); functor != func_list_.end();
+                 functor++) {
+                if (*functor) {
+                    (*functor)();
+                }
             }
             if (error.value() != 0) {
                 fprintf(stderr, "%s\n", error.full_message().c_str());

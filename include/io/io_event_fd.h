@@ -26,9 +26,7 @@ namespace io {
         typedef std::function<void(errors::error_code& error)> event_handler;
 
         event_fd(event_loop* loop, int fd);
-        ~event_fd()
-        {
-        }
+        ~event_fd() {}
         void set_write_handler(const event_handler& handler);
         void data_recved(const event_handler& handler);
         void set_error_handler(const event_handler& handler);
@@ -40,7 +38,7 @@ namespace io {
 
         void enable_read(errors::error_code& error);
         void enable_write(errors::error_code& error);
-        int enabled_event();
+        int  enabled_event();
 
         inline int fd()
         {
@@ -73,7 +71,7 @@ namespace io {
     };
 
     typedef std::shared_ptr<event_fd> event_fd_ref;
-}
-}
+}  // namespace io
+}  // namespace pp
 
 #endif  // EVENT_FD_H

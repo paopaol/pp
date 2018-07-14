@@ -20,22 +20,6 @@ namespace _time {
         return timer_queue_.top();
     }
 
-    int64_t timer_queue::next_timeout()
-    {
-        auto now = Now().Millisecond();
-        if (size() == 0) {
-            return -1;
-        }
-        timer_ref current = top();
-        assert(current);
-        int64_t future = current->future();
-        int     period = future - now;
-        if (period > 0) {
-            return period;
-        }
-        return 0;
-    }
-
     int64_t timer_queue::handle_timeout_timer()
     {
         auto now = Now().Millisecond();
@@ -46,13 +30,18 @@ namespace _time {
             }
             timer_ref current = top();
             assert(current);
+
+            if (current->canceled()) {
+                pop();
+                continue;
+            }
             int64_t future = current->future();
             int     period = future - now;
             if (period > 0) {
                 return period;
             }
-            current->run_timeout();
             pop();
+            current->run_timeout();
             if (current->behavior() == timer::oneshot) {
                 continue;
             }

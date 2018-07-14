@@ -2,17 +2,21 @@
 #define NET_CONN_H
 
 #include <bytes/buffer.h>
+#include <container/any.h>
 #include <io/io_event_fd.h>
 #include <net/net.h>
 #include <time/_time.h>
-#include <container/any.h>
 
 #include <memory>
 
 namespace pp {
+namespace io {
+    class io::event_loop;
+}
+
 namespace net {
     class tcp_conn;
-    typedef std::shared_ptr<tcp_conn> tcp_conn_ref;
+    typedef std::shared_ptr<tcp_conn>                          tcp_conn_ref;
     typedef std::function<void(const net::tcp_conn_ref& conn)> error_handler;
     typedef std::function<void(const net::tcp_conn_ref& conn)> close_handler;
 
@@ -22,15 +26,12 @@ namespace net {
                                const _time::Time&)>
         message_handler;
 
-    class io::event_loop;
     class tcp_conn : public std::enable_shared_from_this<tcp_conn> {
     public:
         enum ConnStatus { Connecting, Connected, DisConnecting, DisConnected };
 
         tcp_conn(io::event_loop* loop, int fd);
-        ~tcp_conn()
-        {
-        }
+        ~tcp_conn() {}
         void connected(const connection_handler& handler);
         void data_recved(const message_handler& handler);
         void set_write_handler(const message_handler& handler);
@@ -52,24 +53,24 @@ namespace net {
         addr local_addr(errors::error_code& error);
         void enable_read(errors::error_code& error);
 
-		void set_user_data(const pp::Any &any)
-		{
-			user_data_ = any;
-		}
+        void set_user_data(const pp::Any& any)
+        {
+            user_data_ = any;
+        }
 
-		pp::Any user_data()
-		{
-			return user_data_;
-		}
+        pp::Any user_data()
+        {
+            return user_data_;
+        }
 
     private:
         void handle_read(errors::error_code& error);
         void handle_write(errors::error_code& error);
         void handle_close(const errors::error_code& error);
         void handle_error(const errors::error_code& error);
-        int write(const void* data, int len, errors::error_code& error);
-        void start_read(errors::error_code &error);
-        void start_write(const void* data, int len, errors::error_code &error);
+        int  write(const void* data, int len, errors::error_code& error);
+        void start_read(errors::error_code& error);
+        void start_write(const void* data, int len, errors::error_code& error);
 
         void shutdown_in_loop();
 
@@ -88,9 +89,9 @@ namespace net {
         ConnStatus         state;
         addr               remote_;
         addr               local_;
-		pp::Any			   user_data_;
+        pp::Any            user_data_;
     };
-}
-}
+}  // namespace net
+}  // namespace pp
 
 #endif

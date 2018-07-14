@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:/Program Files (x86)/Windows Kits/8.1/Include/shared",
+                "C:/Program Files (x86)/Windows Kits/8.1/Include/um",
+                "C:/Program Files (x86)/Windows Kits/8.1/Include/winrt",
+                "D:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/include",
+                "D:/root/opt/cquery_run/lib/clang/6.0.0/include",
+                "C:/Program Files (x86)/Windows Kits/10/Include/10.0.10240.0/ucrt",
+                "D:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/atlmfc",
+                "D:/root/home/workspace/self/yicao/include",
+                "d:/root/home/workspace/self/yicao/src/io",
+                "d:/root/home/workspace/self/yicao/src/net",
+                "d:/root/home/workspace/self/yicao/src/system",
+                "D:/root/home/workspace/self/yicao/build/test/googletest-src/googletest/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "WIN32"
+            ],
+            "compilerPath": "D:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/bin/cl.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "msvc-x64"
+        }
+    ],
+    "version": 4
+}

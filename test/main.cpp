@@ -134,8 +134,18 @@ int main(int argc, char* argv)
                          });
     });
 
-    _time::new_timer(_time::timer::interval, _time::Second * 1,
-                     [&]() { std::cout << "interval ticks" << std::endl; });
+    _time::timer_ref timer;
+
+    timer = _time::new_timer(_time::timer::interval, _time::Second * 1, [&]() {
+        std::cout << "interval ticks" << std::endl;
+        static int count = 0;
+        if (++count == 5) {
+            timer->cancel();
+            //loop.quit();
+        }
+    });
+    _time::new_timer(_time::timer::oneshot, _time::Second * 1,
+                     [&]() { std::cout << "oneshot timer" << std::endl; });
 
     server.Start(error);
     loop.exec();

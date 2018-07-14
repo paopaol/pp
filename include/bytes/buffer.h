@@ -1,106 +1,87 @@
 #ifndef HHT_BYTES_BUFFER_H
 #define HHT_BYTES_BUFFER_H
-#include <vector>
-#include <string>
-#include <iterator>
 #include <algorithm>
 #include <assert.h>
+#include <iterator>
 #include <memory>
-
+#include <string>
+#include <vector>
 
 namespace pp {
-    namespace bytes {
-        class Buffer;
-        typedef std::shared_ptr<Buffer> BufferRef;
+namespace bytes {
+    class Buffer;
+    typedef std::shared_ptr<Buffer> BufferRef;
 
-        class Buffer {
-        public:
-            Buffer();
-            ~Buffer() {}
-          
+    class Buffer {
+    public:
+        Buffer();
+        ~Buffer() {}
 
-            //Read All
-            size_t Read(std::vector<char> &p);
-          
+        // Read All
+        size_t Read(std::vector<char>& p);
 
-            //Read One Byte
-            char ReadByte();
-         
+        // Read One Byte
+        char ReadByte();
 
-            //Read N Bytes from buffer
-            size_t ReadBytes(std::vector<char> &p, int n);
-          
+        // Read N Bytes from buffer
+        size_t ReadBytes(std::vector<char>& p, int n);
 
-            size_t Read(char *buffer, int n);
-         
-            //write data into buffer
-            size_t Write(const char *d, int len);
-          
-            size_t Write(const std::string &s);
-           
-            size_t Write(const std::vector<char> &p);
-           
+        size_t Read(char* buffer, int n);
 
-            void UnReadByte(/*error*/);
-           
+        // write data into buffer
+        size_t Write(const char* d, int len);
 
-            void UnReadBytes(int n/*,error &e*/);
-            
+        size_t Write(const std::string& s);
 
+        size_t Write(const std::vector<char>& p);
 
-            //return unreaded data size
-            int Len();
-           
+        void UnReadByte(/*error*/);
 
-            int Cap();
-            
-            void Reset();
-          
+        void UnReadBytes(int n /*,error &e*/);
 
-            bool PeekAt(std::vector<char> &p, int index, int size);
-           
+        // return unreaded data size
+        int Len();
 
-            void Optimization();
+        int Cap();
 
+        void Reset();
 
-            //ReadFrom
-            //WriteTo
+        bool PeekAt(std::vector<char>& p, int index, int size);
 
-        private:
+        void Optimization();
 
-            void growSpace(int len);
-   
+        // ReadFrom
+        // WriteTo
 
-            int leftSpace();
-       
-            void hasWritten(int len);
-      
-            void hasReaded(int len);
-      
+    private:
+        void growSpace(int len);
 
-            char *beginWrite();
-        
+        int leftSpace();
 
-            const char *beginWrite()const;
-  
+        void hasWritten(int len);
 
-            char *lastRead();
-     
+        void hasReaded(int len);
 
-            const char *beginRead() const;
-      
+        char* beginWrite();
 
-            char *begin();
-      
+        const char* beginWrite() const;
 
-            const char *begin()const;
-        
-            std::vector<char>			b;
-            size_t                      ridx;
-            size_t                      widx;
-        };
+        char* lastRead();
 
-    }
-}
+        const char* beginRead() const;
+
+        char* begin();
+
+        const char* begin() const;
+
+        std::vector<char> b;
+        size_t            ridx;
+        size_t            widx;
+    };
+
+}  // namespace bytes
+}  // namespace pp
 
 #endif
+
+// void enable_wakeup(errors::error_code &error);
