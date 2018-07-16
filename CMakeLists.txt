@@ -58,8 +58,12 @@ if(IS_WIN)
 endif()
 
 ####net
+set(net-src-list
+  src/net/tcp_server.cpp
+  )
 if(IS_WIN)
   set(net-src-list
+	${net-src-list}
     src/net/windows/net_win_tcp_conn.cpp
     src/net/windows/net_win_iocp_tcp_accpeter.cpp
     src/net/windows/net_win_iocp_tcp_accpeter.h

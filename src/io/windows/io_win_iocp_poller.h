@@ -47,7 +47,7 @@ namespace pp {
 
       HANDLE m_iocp;
       //EventVec m_eventsVec;
-      events_map_t eventsMap;
+      events_map_t events_map;
     };
 
   }

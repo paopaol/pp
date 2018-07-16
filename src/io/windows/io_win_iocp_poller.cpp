@@ -11,8 +11,8 @@
 namespace pp {
 namespace io {
 
-    static HANDLE iocpCreate(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
-                             errors::error_code& error)
+    static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
+                                        errors::error_code& error)
     {
         auto hiocp = CreateIoCompletionPort(h, iocp, ptr, 0);
         if (hiocp == NULL) {
@@ -48,11 +48,11 @@ namespace io {
         iocp_event_fd* event = static_cast<iocp_event_fd*>(_event);
 
         // if not found the event fd, we will create it
-        auto it = eventsMap.find(event->fd());
-        if (it == NOTFOUND_FROM(eventsMap)) {
-            iocpCreate(( HANDLE )event->fd(), m_iocp, NULL, error);
+        auto it = events_map.find(event->fd());
+        if (it == NOTFOUND_FROM(events_map)) {
+            iocp_associate_handle(( HANDLE )event->fd(), m_iocp, NULL, error);
             if (error.value() == 0) {
-                eventsMap[event->fd()] = event;
+                events_map[event->fd()] = event;
             }
             error.clear();
         }
@@ -76,9 +76,9 @@ namespace io {
     {
         iocp_event_fd* ev = static_cast<iocp_event_fd*>(event);
 
-        auto it = eventsMap.find(ev->fd());
-        if (it != NOTFOUND_FROM(eventsMap)) {
-            eventsMap.erase(it);
+        auto it = events_map.find(ev->fd());
+        if (it != NOTFOUND_FROM(events_map)) {
+            events_map.erase(it);
         }
     }
 
@@ -121,7 +121,7 @@ namespace io {
         active_req = CONTAINING_RECORD(overlapped, io_request_t, Overlapped);
 
         iocp_event_fd* event_fd =
-            static_cast<iocp_event_fd*>(eventsMap[active_req->io_fd]);
+            static_cast<iocp_event_fd*>(events_map[active_req->io_fd]);
         assert(event_fd->fd() == active_req->io_fd);
         active_req->io_size = iosize;
         event_fd->set_active_pending(active_req);
