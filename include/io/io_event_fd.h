@@ -30,7 +30,7 @@ namespace io {
         void set_write_handler(const event_handler& handler);
         void data_recved(const event_handler& handler);
         void set_error_handler(const event_handler& handler);
-        void disconnected(const event_handler& handler);
+        void closed(const event_handler& handler);
 
         void handle_event();
         void handle_event_with_guard();

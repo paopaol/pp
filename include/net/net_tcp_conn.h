@@ -20,10 +20,10 @@ namespace net {
     typedef std::function<void(const net::tcp_conn_ref& conn)> error_handler;
     typedef std::function<void(const net::tcp_conn_ref& conn)> close_handler;
 
-    typedef std::function<void(const net::tcp_conn_ref&, const _time::Time&)>
+    typedef std::function<void(const net::tcp_conn_ref&, const _time::time&)>
         connection_handler;
     typedef std::function<void(const net::tcp_conn_ref&, bytes::Buffer&,
-                               const _time::Time&)>
+                               const _time::time&)>
         message_handler;
 
     class tcp_conn : public std::enable_shared_from_this<tcp_conn> {
@@ -33,10 +33,10 @@ namespace net {
         tcp_conn(io::event_loop* loop, int fd);
         ~tcp_conn() {}
         void connected(const connection_handler& handler);
+        void closed(const close_handler& handler);
         void data_recved(const message_handler& handler);
         void set_write_handler(const message_handler& handler);
         // void set_error_handler(const error_handler &handler);
-        void disconnected(const close_handler& handler);
 
         void write(const void* data, int len);
         void write(bytes::Buffer& buffer);
@@ -61,6 +61,11 @@ namespace net {
         pp::Any user_data()
         {
             return user_data_;
+        }
+
+        net::socket& socket() 
+        {
+            return socket_;
         }
 
     private:

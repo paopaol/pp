@@ -53,7 +53,7 @@ private:
 
         conn->connected(handle_new_conn);
         conn->data_recved(handle_recved_data);
-        conn->disconnected(
+        conn->closed(
             [&](const net::tcp_conn_ref& conn) { removeFromConnList(conn); });
         conn->connect_established();
     }
@@ -88,7 +88,7 @@ int main(int argc, char* argv)
     TcpServer          server(&loop, net::addr("0.0.0.0", 8080), "echo");
 
     server.new_connection(
-        [&](const net::tcp_conn_ref& conn, const _time::Time& time) {
+        [&](const net::tcp_conn_ref& conn, const _time::time& time) {
             errors::error_code error;
             if (!conn->connected()) {
                 std::cout << "remote:" << conn->remote_addr(error).string()
@@ -96,13 +96,15 @@ int main(int argc, char* argv)
                 return;
             }
 
-            std::cout << time.String()
-                      << "  remote:" << conn->remote_addr(error).string()
-                      << "connected" << std::endl;
+            std::cout << time.string()
+					  << " local:" << conn->local_addr(error).string()
+                      << " remote:" << conn->remote_addr(error).string()
+                      << " connected" << std::endl;
+			conn->socket().set_tcp_nodelay(true, error);
         });
 
     server.message_recved([&](const net::tcp_conn_ref& conn,
-                              bytes::Buffer& message, const _time::Time& time) {
+                              bytes::Buffer& message, const _time::time& time) {
         Slice s;
         message.Read(s);
         std::string str(s.data(), s.size());

@@ -15,8 +15,8 @@ namespace _time {
                && "timer create failed, not exits event loop in current "
                   "thread");
         assert(when > 0 && "timer period can't be < 0");
-        auto now = Now();
-        future_  = now.Add(when).Millisecond();
+        auto now = _time::now();
+        future_  = now.add(when).millisecond();
         ;
     }
 

@@ -121,9 +121,9 @@ namespace io {
         active_req = CONTAINING_RECORD(overlapped, io_request_t, Overlapped);
 
         iocp_event_fd* event_fd =
-            static_cast<iocp_event_fd*>(eventsMap[active_req->IoFd]);
-        assert(event_fd->fd() == active_req->IoFd);
-        active_req->IoSize = iosize;
+            static_cast<iocp_event_fd*>(eventsMap[active_req->io_fd]);
+        assert(event_fd->fd() == active_req->io_fd);
+        active_req->io_size = iosize;
         event_fd->set_active_pending(active_req);
 
         event_fd->handle_event();

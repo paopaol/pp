@@ -74,25 +74,28 @@ namespace io {
 
     void event_loop::exec()
     {
-        assert(!execing_);
+        assert(!execing_ && "io::event_loop has been stoped!");
         assert(in_created_thread());
         execing_ = true;
 
         while (!exit_) {
-            int next_timeout =
-                static_cast<int>(timer_queue_->handle_timeout_timer());
-            errors::error_code error;
-            event_poller_->poll(next_timeout, active_ev_fd_list_, error);
-            for (auto ev = active_ev_fd_list_.begin();
-                 ev != active_ev_fd_list_.end(); ev++) {
-                (*ev)->handle_event();
-            }
+            // first, run pending functions
             for (auto functor = func_list_.begin(); functor != func_list_.end();
                  functor++) {
                 if (*functor) {
                     (*functor)();
                 }
             }
+            int next_timeout =
+                static_cast<int>(timer_queue_->handle_timeout_timer());
+            errors::error_code error;
+            event_poller_->poll(next_timeout, active_ev_fd_list_, error);
+#ifndef WIN32
+            for (auto ev = active_ev_fd_list_.begin();
+                 ev != active_ev_fd_list_.end(); ev++) {
+                (*ev)->handle_event();
+            }
+#endif
             if (error.value() != 0) {
                 fprintf(stderr, "%s\n", error.full_message().c_str());
             }

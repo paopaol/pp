@@ -39,29 +39,34 @@ namespace _time {
     static const Duration minDuration = (-1 << 63);
     static const Duration maxDuration = (1 << 63) - 1;
 
-    Month::Month(int month)
+    month::month(int month)
     {
         m = month;
     }
 
-    std::string Month::String() const
+    std::string month::string() const
     {
         return months[m - 1];
     }
 
-    Weekday::Weekday(int w)
+	int month::number()
+	{
+		return m;
+	}
+
+    weekday::weekday(int w)
     {
         wd = w;
     }
 
-    std::string Weekday::String() const
+    std::string weekday::string() const
     {
         return days[wd];
     }
 
     enum {
         secondsPerMinute = 60,
-        secondsPerHour   = 60 * 60,
+        secondsPerHour   = 60 * secondsPerMinute,
         secondsPerDay    = 24 * secondsPerHour,
         secondsPerWeek   = 7 * secondsPerDay,
         daysPer400Years  = 365 * 400 + 97,
@@ -69,7 +74,7 @@ namespace _time {
         daysPer4Years    = 365 * 4 + 1
     };
 
-    Time::Time()
+    time::time()
     {
         struct timeval tv;
 
@@ -84,14 +89,14 @@ namespace _time {
 #endif
     }
 
-    Time::Time(const Time& t)
+    time::time(const time& t)
     {
         sec  = t.sec;
         nsec = t.nsec;
         tm   = t.tm;
     }
 
-    Time& Time::operator=(const Time& t)
+    time& time::operator=(const time& t)
     {
         sec  = t.sec;
         nsec = t.nsec;
@@ -99,22 +104,22 @@ namespace _time {
         return *this;
     }
 
-    bool Time::After(Time u)
+    bool time::after(time u)
     {
         return this->sec > u.sec || (this->sec == u.sec && this->nsec > u.nsec);
     }
 
-    bool Time::Before(Time u)
+    bool time::before(time u)
     {
         return this->sec < u.sec || (this->sec == u.sec && this->nsec < u.nsec);
     }
 
-    bool Time::Equal(Time u)
+    bool time::equal(time u)
     {
         return this->sec == u.sec && this->nsec == u.nsec;
     }
 
-    Time Time::Add(Duration d)
+    time time::add(Duration d)
     {
         sec += d / ( int64_t )1e9;
 
@@ -137,88 +142,88 @@ namespace _time {
         return *this;
     }
 
-    Duration Time::Sub(Time& u)
+    Duration time::sub(time& u)
     {
-        Time     uu = u;
+        time     uu = u;
         Duration d  = (Duration)(sec - uu.sec) * _time::Second
                      + (Duration)(nsec - uu.nsec);
 
-        if (uu.Add(d).Equal(*this)) {
+        if (uu.add(d).equal(*this)) {
             return d;
         }
-        if (this->Before(uu)) {
+        if (this->before(uu)) {
             return minDuration;
         }
         return maxDuration;
     }
 
-    int64_t Time::Unix()
+    int64_t time::unix()
     {
         return sec;
     }
 
-    int64_t Time::UnixNano()
+    int64_t time::unixnano()
     {
         return ( sec )*1000 * 1000 * 1000 + ( int64_t )nsec;
     }
 
-    int Time::Year()
+    int time::year()
     {
         return tm.tm_year + 1900;
     }
 
-    Month Time::_Month()
+    month time::month()
     {
-        Month m(tm.tm_mon + 1);
+        _time::month m(tm.tm_mon + 1);
 
         return m;
     }
 
-    int Time::Day()
+    int time::mday()
     {
         return tm.tm_mday;
     }
 
-    int Time::Hour()
+    int time::hour()
     {
         return tm.tm_hour;
     }
 
-    int Time::Minute()
+    int time::minute()
     {
         return tm.tm_min;
     }
 
-    int Time::Second()
+    int time::second()
     {
         return tm.tm_sec;
     }
 
-    int Time::Nanosecond()
+    int time::nanosecond()
     {
         return nsec;
     }
 
-    int64_t Time::Millisecond()
+    int64_t time::millisecond()
     {
-        return UnixNano() / _time::Millisecond;
+        return unixnano() / _time::Millisecond;
     }
 
-    int Time::YearDay()
+    int time::yearday()
     {
         return tm.tm_yday + 1;
     }
 
-    std::string Time::Format(std::string layout)
+    std::string time::format(std::string layout)
     {
         char buf[128] = { 0 };
 
         strftime(buf, sizeof(buf), layout.c_str(), &tm);
 
-        return string(buf);
+        return std::string(buf);
     }
 
-    string Time::String() const
+    string time::string() const
     {
         char buf[128]  = { 0 };
         char str[1024] = { 0 };
@@ -229,9 +234,9 @@ namespace _time {
         return str;
     }
 
-    Time Now()
+    time now()
     {
-        Time now;
+        time now;
 
         return now;
     }

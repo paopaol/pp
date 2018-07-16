@@ -22,7 +22,7 @@ namespace bytes {
     // Read N Bytes from buffer
     size_t Buffer::ReadBytes(std::vector<char>& p, int n)
     {
-        assert(n >= 0);
+        assert(n >= 0 && "buffer::readbytes(), bad input paramer");
 
         p.clear();
         n = n > Len() ? Len() : n;
@@ -33,7 +33,7 @@ namespace bytes {
 
     size_t Buffer::Read(char* buffer, int n)
     {
-        assert(n >= 0);
+        assert(n >= 0 && "buffer::read(), bad input paramer");
         n = n > Len() ? Len() : n;
         std::copy(lastRead(), lastRead() + n, buffer);
         hasReaded(n);
@@ -67,7 +67,8 @@ namespace bytes {
 
     void Buffer::UnReadBytes(int n /*,error &e*/)
     {
-        assert((lastRead() - begin()) >= n);
+        assert((lastRead() - begin()) >= n
+               && "buffer::unreadbytes too much data size");
         ridx -= n;
     }
 

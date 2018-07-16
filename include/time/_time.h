@@ -2,8 +2,8 @@
 // Created by jz on 17-2-26.
 //
 
-#ifndef PP_TIME_H
-#define PP_TIME_H
+#ifndef PP_time_H
+#define PP_time_H
 
 #include <functional>
 #include <memory>
@@ -29,78 +29,79 @@ namespace _time {
     const Duration Minute      = 60 * Second;
     const Duration Hour        = 60 * Minute;
 
-    class Month {
+    class month {
     public:
-        Month(int month);
+        month(int month);
 
-        std::string String() const;
+        std::string string() const;
+		int number();
 
     private:
         int m;
     };
 
-    class Weekday {
+    class weekday {
     public:
-        Weekday(int w);
+        weekday(int w);
 
-        std::string String() const;
+        std::string string() const;
 
     private:
         int wd;
     };
 
-    const Month January   = 1;
-    const Month February  = 2;
-    const Month March     = 3;
-    const Month April     = 4;
-    const Month May       = 5;
-    const Month June      = 6;
-    const Month July      = 7;
-    const Month August    = 8;
-    const Month September = 9;
-    const Month October   = 10;
-    const Month November  = 11;
-    const Month December  = 12;
+    const month January   = 1;
+    const month February  = 2;
+    const month March     = 3;
+    const month April     = 4;
+    const month May       = 5;
+    const month June      = 6;
+    const month July      = 7;
+    const month August    = 8;
+    const month September = 9;
+    const month October   = 10;
+    const month November  = 11;
+    const month December  = 12;
 
-    const Weekday Sunday    = 0;
-    const Weekday Monday    = 1;
-    const Weekday Tuesday   = 2;
-    const Weekday Wednesday = 3;
-    const Weekday Thursday  = 4;
-    const Weekday Friday    = 5;
-    const Weekday Saturday  = 6;
+    const weekday Sunday    = 0;
+    const weekday Monday    = 1;
+    const weekday Tuesday   = 2;
+    const weekday Wednesday = 3;
+    const weekday Thursday  = 4;
+    const weekday Friday    = 5;
+    const weekday Saturday  = 6;
 
-    class Time {
+    class time {
     public:
-        Time();
-        Time(const Time& t);
+        time();
+        time(const time& t);
 
-        bool After(Time u);
+        bool after(time u);
 
-        bool Before(Time u);
+        bool before(time u);
 
-        bool Equal(Time u);
+        bool equal(time u);
 
-        Time     Add(Duration d);
-        Duration Sub(Time& u);
+        time     add(Duration d);
+        Duration sub(time& u);
 
-        int64_t Unix();
-        int64_t UnixNano();
-        int     Year();
-        Month   _Month();
-        int     Day();
-        int     Hour();
-        int     Minute();
-        int     Second();
-        int     Nanosecond();
-        int64_t Millisecond();
+        int64_t unix();
+        int64_t unixnano();
+        int     year();
+        month   month();
+        int     mday();
+        int     hour();
+        int     minute();
+        int     second();
+        int     nanosecond();
+        int64_t millisecond();
 
-        int YearDay();
+        int yearday();
 
-        std::string Format(std::string layout);
-        std::string String() const;
+        std::string format(std::string layout = "%Y-%m-%d %H:%M:%S");
+        std::string string() const;
 
-        Time& operator=(const Time& t);
+        time& operator=(const time& t);
 
     private:
         int64_t sec;
@@ -110,7 +111,7 @@ namespace _time {
         //        Location        *loc;
     };
 
-    Time Now();
+    time now();
 
     class timer;
     typedef std::function<void()>  timer_handler;
@@ -191,4 +192,4 @@ namespace _time {
 
 }  // namespace pp
 
-#endif  // PP_TIME_H
+#endif  // PP_time_H

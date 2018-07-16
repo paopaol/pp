@@ -22,7 +22,7 @@ namespace _time {
 
     int64_t timer_queue::handle_timeout_timer()
     {
-        auto now = Now().Millisecond();
+        auto now = _time::now().millisecond();
 
         while (1) {
             if (size() == 0) {
@@ -36,7 +36,7 @@ namespace _time {
                 continue;
             }
             int64_t future = current->future();
-            int     period = future - now;
+            int64_t period = future - now;
             if (period > 0) {
                 return period;
             }
@@ -45,6 +45,8 @@ namespace _time {
             if (current->behavior() == timer::oneshot) {
                 continue;
             }
+            // if the timer is a interval timer, so we need
+            // push the popped timer into timerqueue
             push(current);
         }
     }

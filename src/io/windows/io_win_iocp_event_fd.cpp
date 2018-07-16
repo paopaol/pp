@@ -60,7 +60,7 @@ namespace io {
     {
         assert(active_pending_req_ != nullptr);
 
-        if (active_pending_req_->IoSize == 0) {
+        if (active_pending_req_->io_size == 0) {
             handle_zero_done();
             return 0;
         }
@@ -85,18 +85,18 @@ namespace io {
         errors::error_code error;
 
         assert(active_pending_req_ != nullptr);
-        if (active_pending_req_->IoSize == 0) {
+        if (active_pending_req_->io_size == 0) {
             handle_zero_done();
             return 0;
         }
         active_pending_req_->IoOpt = iocp_event_fd::EV_WRITE;
-        active_pending_req_->SentBytes += active_pending_req_->IoSize;
-        if (active_pending_req_->SentBytes < active_pending_req_->TotalBytes) {
+        active_pending_req_->sent_bytes += active_pending_req_->io_size;
+        if (active_pending_req_->sent_bytes < active_pending_req_->total_bytes) {
             // FIXME:need test
             const char* data =
-                active_pending_req_->Buffer + active_pending_req_->SentBytes;
-            int len = active_pending_req_->TotalBytes
-                      - active_pending_req_->SentBytes;
+                active_pending_req_->buffer + active_pending_req_->sent_bytes;
+            int len = active_pending_req_->total_bytes
+                      - active_pending_req_->sent_bytes;
             post_write(( const char* )data, len,
                        std::bind(start_write_, std::placeholders::_1,
                                  std::placeholders::_2, std::placeholders::_3),
@@ -151,7 +151,7 @@ namespace io {
     {
         io_request_ref request = std::make_shared<struct io_request_t>();
 
-        request->IoFd = fd();
+        request->io_fd = fd();
         request->IoOpt |= ev;
         return request;
     }

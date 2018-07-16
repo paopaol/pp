@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <io/io_event_loop.h>
+#include <sync/sync_chan.h>
 #include <system/sys_thread.h>
 #include <thread>
 
@@ -24,7 +25,12 @@ TEST_F(test_io_event_loop, test_run_in_loop_construct_thread)
 
 TEST_F(test_io_event_loop, test_run_in_loop_other_thread)
 {
+    sync::Chan<bool> chan;
+
     std::thread other_thread([&]() {
+        // 3 seconds after, run start run this thread function
+        bool notify;
+        chan.read(notify);
         loop_.run_in_loop(
             [&]() { EXPECT_EQ(loop_.in_created_thread(), true); });
     });
@@ -33,6 +39,10 @@ TEST_F(test_io_event_loop, test_run_in_loop_other_thread)
         loop_.quit();
     });
     other_thread2.detach();
+    _time::new_timer(_time::timer::oneshot, _time::Second * 3, [&]() {
+        // emit start run thread signal
+        chan.write(true);
+    });
     loop_.exec();
 }
 

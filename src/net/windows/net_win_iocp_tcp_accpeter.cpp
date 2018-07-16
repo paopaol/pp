@@ -85,7 +85,7 @@ namespace net {
 
         auto request = evfd->create_io_request(io::iocp_event_fd::EV_ACCPET);
 
-        ret = accpet_ex(evfd->fd(), accept_socket, (LPVOID)(request->Buffer), 0,
+        ret = accpet_ex(evfd->fd(), accept_socket, (LPVOID)(request->buffer), 0,
                         sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE),
                         &recv_bytes, (LPOVERLAPPED) & (request->Overlapped));
 
@@ -96,7 +96,7 @@ namespace net {
             return -1;
         }
         evfd->queued_pending_request(request);
-        request->AccpetFd = accept_socket;
+        request->accpet_fd = accept_socket;
         return 0;
     }
 
@@ -108,11 +108,11 @@ namespace net {
 
         auto active = evfd->remove_active_request();
 
-        int client_fd = active->AccpetFd;
-        int fd        = active->IoFd;
+        int client_fd = active->accpet_fd;
+        int fd        = active->io_fd;
 
         int ret = ::setsockopt(client_fd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
-                               ( char* )&active->IoFd, sizeof(active->IoFd));
+                               ( char* )&active->io_fd, sizeof(active->io_fd));
         evfd->enable_accpet(
             error,
             std::bind(&win_iocp_tcp_accpeter::start_accpet, this,

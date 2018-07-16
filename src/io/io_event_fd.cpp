@@ -26,7 +26,7 @@ namespace io {
         handler_error_ = handler;
     }
 
-    void event_fd::disconnected(const event_handler& handler)
+    void event_fd::closed(const event_handler& handler)
     {
         handler_close_ = handler;
     }

@@ -82,28 +82,28 @@ namespace io {
 #define MAX_WSA_BUFF_SIZE (2 * (sizeof(SOCKADDR_STORAGE) + 16) + 5)
     struct io_request_t {
         io_request_t()
-            : TotalBytes(0),
-              SentBytes(0),
+            : total_bytes(0),
+              sent_bytes(0),
               IoOpt(iocp_event_fd::EV_NONE),
-              AccpetFd(-1),
-              IoFd(-1),
-              IoSize(0)
+              accpet_fd(-1),
+              io_fd(-1),
+              io_size(0)
         {
             ZeroMemory(&Overlapped, sizeof(Overlapped));
-            Wsabuf.buf = Buffer;
-            Wsabuf.len = sizeof(Buffer);
-            ZeroMemory(Wsabuf.buf, Wsabuf.len);
+            wasbuf.buf = buffer;
+            wasbuf.len = sizeof(buffer);
+            ZeroMemory(wasbuf.buf, wasbuf.len);
         }
 
         WSAOVERLAPPED Overlapped;
-        char          Buffer[MAX_WSA_BUFF_SIZE];
-        WSABUF        Wsabuf;
-        int           TotalBytes;
-        int           SentBytes;
+        char          buffer[MAX_WSA_BUFF_SIZE];
+        WSABUF        wasbuf;
+        int           total_bytes;
+        int           sent_bytes;
         int           IoOpt;
-        int           AccpetFd;
-        int           IoFd;
-        int           IoSize;  // GetQueuedCompletionStatus  second arg
+        int           accpet_fd;
+        int           io_fd;
+        int           io_size;  // GetQueuedCompletionStatus  second arg
 
     private:
         io_request_t(const io_request_t&);

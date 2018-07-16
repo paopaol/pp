@@ -24,7 +24,7 @@ namespace net {
             [&](errors::error_code& error) { handle_read(error); });
         event_fd_->set_write_handler(
             [&](errors::error_code& error) { handle_write(error); });
-        event_fd_->disconnected(
+        event_fd_->closed(
             [&](errors::error_code& error) { handle_close(error); });
         event_fd_->set_error_handler(
             [&](errors::error_code& error) { handle_error(error); });
@@ -48,7 +48,7 @@ namespace net {
         msg_write_handler_ = handler;
     }
 
-    void tcp_conn::disconnected(const close_handler& handler)
+    void tcp_conn::closed(const close_handler& handler)
     {
         close_handler_ = handler;
     }
@@ -89,10 +89,10 @@ namespace net {
         io::iocp_event_fd::io_request_ref done_req =
             evfd->remove_active_request();
 
-        read_buf_.Write(( const char* )done_req->Buffer, done_req->IoSize);
+        read_buf_.Write(( const char* )done_req->buffer, done_req->io_size);
 
         if (read_buf_.Len() > 0 && msg_read_handler_) {
-            msg_read_handler_(shared_from_this(), read_buf_, _time::Now());
+            msg_read_handler_(shared_from_this(), read_buf_, _time::now());
         }
 
         if (evfd->pending_request_size() > 0) {
@@ -210,7 +210,7 @@ namespace net {
 
         io::iocp_event_fd::io_request_ref request =
             evfd->create_io_request(io::event_fd::EV_READ);
-        int ret = WSARecv(evfd->fd(), &request.get()->Wsabuf, 1, &recvBytes,
+        int ret = WSARecv(evfd->fd(), &request.get()->wasbuf, 1, &recvBytes,
                           &flags, &request.get()->Overlapped, NULL);
         if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
             int code = ::GetLastError();
@@ -233,11 +233,11 @@ namespace net {
 
         io::iocp_event_fd::io_request_ref request =
             evfd->create_io_request(io::iocp_event_fd::EV_WRITE);
-        memcpy(request.get()->Wsabuf.buf, data, len);
-        request.get()->Wsabuf.len = len;
-        request.get()->TotalBytes = len;
+        memcpy(request.get()->wasbuf.buf, data, len);
+        request.get()->wasbuf.len = len;
+        request.get()->total_bytes = len;
 
-        int ret = WSASend(evfd->fd(), &request.get()->Wsabuf, 1, &sentBytes, 0,
+        int ret = WSASend(evfd->fd(), &request.get()->wasbuf, 1, &sentBytes, 0,
                           &request.get()->Overlapped, NULL);
         if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
             error = hht_make_error_code(
@@ -320,7 +320,7 @@ namespace net {
         assert(state == Connecting);
         state = Connected;
         if (connection_handler_) {
-            connection_handler_(shared_from_this(), _time::Time());
+            connection_handler_(shared_from_this(), _time::time());
         }
         event_fd_->tie(shared_from_this());
         errors::error_code error;
@@ -343,7 +343,7 @@ namespace net {
 
         if (state == DisConnected) {
             if (connection_handler_) {
-                connection_handler_(shared_from_this(), _time::Now());
+                connection_handler_(shared_from_this(), _time::now());
             }
             errors::error_code error;
             evfd->remove_event(error);
