@@ -42,14 +42,11 @@ namespace io {
         void enable_accpet(errors::error_code&         error,
                            const start_accpet_handler& start_handler,
                            const accpet_done_handler&  done_handler);
-        void enable_read(errors::error_code&       error,
-                         const start_read_handler& read_handler);
         void enable_write(errors::error_code&        error,
                           const start_write_handler& write_handler);
 
         void handle_event();
         void handle_event_with_guard();
-        void post_read(errors::error_code& error);
         int  post_write(const char* data, int len,
                         const start_write_handler& write_handler,
                         errors::error_code&        error);

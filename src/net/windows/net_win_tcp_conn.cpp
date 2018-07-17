@@ -26,12 +26,9 @@ namespace net {
     {
         event_fd_->data_recved(
             [&](errors::error_code& error) { handle_read(error); });
-        event_fd_->set_write_handler(
-            [&](errors::error_code& error) { handle_write(error); });
+
         event_fd_->closed(
             [&](errors::error_code& error) { handle_close(error); });
-        event_fd_->set_error_handler(
-            [&](errors::error_code& error) { handle_error(error); });
 
         errors::error_code error;
         socket_.set_nonblock(error);
@@ -45,11 +42,6 @@ namespace net {
     void tcp_conn::data_recved(const message_handler& handler)
     {
         msg_read_handler_ = handler;
-    }
-
-    void tcp_conn::set_write_handler(const message_handler& handler)
-    {
-        msg_write_handler_ = handler;
     }
 
     void tcp_conn::closed(const close_handler& handler)
@@ -75,17 +67,6 @@ namespace net {
         }
     }
 
-    void tcp_conn::handle_error(const errors::error_code& error)
-    {
-        io::iocp_event_fd* evfd =
-            static_cast<io::iocp_event_fd*>(event_fd_.get());
-
-        state = DisConnected;
-        if (error_handler_ && evfd->pending_request_size() == 0) {
-            error_handler_(shared_from_this());
-        }
-    }
-
     void tcp_conn::handle_read(errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
@@ -101,13 +82,16 @@ namespace net {
         }
 
         write_some_buffer_data(error);
+        if (error.value() != 0) {
+            handle_close(error);
+            return;
+        }
 
         if (evfd->pending_request_size() > 0) {
             return;
         }
 
-        evfd->enable_read(error, std::bind(&tcp_conn::start_read, this,
-                                           std::placeholders::_1));
+        start_read(error);
         if (error.value() != 0) {
             handle_close(error);
         }
@@ -122,15 +106,19 @@ namespace net {
             evfd->remove_active_request();
 
         // write remaining data
+        // if has remaining data, this call will add
+        // one io pending request
         write_some_buffer_data(error);
-        //如果不主动投递一个接收请求，
-        //那么下次对方发送过来的数据就不会接收到了
+        if (error.value() != 0) {
+            handle_close(error);
+        }
 
+        // if already have pending io request,
+        // return
         if (evfd->pending_request_size() > 0) {
             return;
         }
-        evfd->enable_read(error, std::bind(&tcp_conn::start_read, this,
-                                           std::placeholders::_1));
+        start_read(error);
         if (error.value() != 0) {
             handle_close(error);
         }
@@ -211,8 +199,7 @@ namespace net {
                           &flags, &request.get()->Overlapped, NULL);
         if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
             error = hht_make_error_code(errors::error::NET_ERROR);
-            error.suffix_msg(errors::windows_errstr(::WSAGetLastError()));
-            // printf("%s", error.full_message().c_str());
+            error.suffix_msg(errors::windows_errstr(ecode));
             return;
         }
         evfd->queued_pending_request(request);
@@ -226,18 +213,7 @@ namespace net {
             int  min_write = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
             char data[MAX_WSA_BUFF_SIZE] = { 0 };
             write_buf_.Read(data, sizeof(data));
-
             write(data, min_write, error);
-
-            // evfd->post_write(
-            //     data, min_write,
-            //     std::bind(&tcp_conn::start_write, this,
-            //     std::placeholders::_1,
-            //               std::placeholders::_2, std::placeholders::_3),
-            //     error);
-            if (error.value() != 0) {
-                handle_close(error);
-            }
             return;
         }
     }
@@ -311,6 +287,10 @@ namespace net {
     void tcp_conn::enable_read(errors::error_code& error)
     {
         event_fd_->enable_read(error);
+        start_read(error);
+        // if (error.value() != 0) {
+        //    handle_close(error);
+        //}
     }
 
     void tcp_conn::shutdown()
@@ -345,14 +325,15 @@ namespace net {
         }
         event_fd_->tie(shared_from_this());
         errors::error_code error;
-        evfd->enable_read(error, std::bind(&tcp_conn::start_read, this,
-                                           std::placeholders::_1));
+        enable_read(error);
+        if (error.value() != 0 && connection_handler_) {
+            handle_close(error);
+            return;
+        }
         evfd->enable_write(error, std::bind(&tcp_conn::start_write, this,
                                             std::placeholders::_1,
                                             std::placeholders::_2,
                                             std::placeholders::_3));
-        if (error.value() == 0) {
-        }
     }
 
     void tcp_conn::connect_destroyed(const errors::error_code& error)

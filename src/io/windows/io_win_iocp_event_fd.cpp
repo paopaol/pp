@@ -28,25 +28,12 @@ namespace io {
         event_loop_->update_event_fd(this, error);
     }
 
-    void iocp_event_fd::enable_read(errors::error_code&       error,
-                                    const start_read_handler& read_handler)
-    {
-        start_read_ = read_handler;
-        event_fd::enable_read(error);
-    }
-
     void iocp_event_fd::enable_write(errors::error_code&        error,
                                      const start_write_handler& write_handler)
     {
         start_write_ = write_handler;
     }
 
-    void iocp_event_fd::post_read(errors::error_code& error)
-    {
-        if (start_read_) {
-            start_read_(error);
-        }
-    }
 
     int iocp_event_fd::handle_zero_done()
     {

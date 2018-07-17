@@ -38,8 +38,6 @@ namespace net {
         void connected(const connection_handler& handler);
         void closed(const close_handler& handler);
         void data_recved(const message_handler& handler);
-        void set_write_handler(const message_handler& handler);
-        // void set_error_handler(const error_handler &handler);
 
         void write(const void* data, int len);
         void write(bytes::Buffer& buffer);
@@ -75,7 +73,6 @@ namespace net {
         void handle_read(errors::error_code& error);
         void handle_write(errors::error_code& error);
         void handle_close(const errors::error_code& error);
-        void handle_error(const errors::error_code& error);
         int  write(const void* data, int len, errors::error_code& error);
         void start_read(errors::error_code& error);
         void start_write(const void* data, int len, errors::error_code& error);
@@ -99,7 +96,7 @@ namespace net {
         addr               remote_;
         addr               local_;
         pp::Any            user_data_;
-		errors::error_code error_;
+        errors::error_code error_;
     };
 }  // namespace net
 }  // namespace pp

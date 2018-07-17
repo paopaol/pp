@@ -57,10 +57,6 @@ namespace io {
             error.clear();
         }
 
-        // now, update it
-        if (event->enabled_event() & iocp_event_fd::EV_READ) {
-            event->post_read(error);
-        }
         if (event->enabled_event() & iocp_event_fd::EV_ACCPET) {
             event->post_accpet(error);
         }
