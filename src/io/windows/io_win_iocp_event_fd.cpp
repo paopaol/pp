@@ -34,7 +34,6 @@ namespace io {
         start_write_ = write_handler;
     }
 
-
     int iocp_event_fd::handle_zero_done()
     {
         set_active(iocp_event_fd::EV_CLOSE);
