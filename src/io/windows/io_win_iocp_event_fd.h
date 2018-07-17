@@ -13,8 +13,8 @@
 #include <WinSock2.h>
 #include <Windows.h>
 
-#define SUCCEEDED_WITH_IOCP(result) \
-    ((result) || ((::WSAGetLastError()) == ERROR_IO_PENDING))
+#define SUCCEEDED_WITH_IOCP(result, ecode) \
+    ((result) || ((ecode = ::WSAGetLastError()) == ERROR_IO_PENDING))
 
 namespace pp {
 namespace io {

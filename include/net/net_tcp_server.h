@@ -20,7 +20,8 @@ namespace net {
 
     private:
         void on_new_conn(int fd);
-        void remove_from_conn_list(const net::tcp_conn_ref& conn);
+        void remove_from_conn_list(const net::tcp_conn_ref&  conn,
+                                   const errors::error_code& error);
 
         io::event_loop*                          loop_;
         tcp_server_accpeter*                     accpeter_;

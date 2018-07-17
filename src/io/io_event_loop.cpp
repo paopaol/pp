@@ -34,8 +34,6 @@ namespace io {
           timer_queue_(std::make_shared<_time::timer_queue>())
 #ifdef WIN32
     {
-        std::cerr << error.full_message() << std::endl;
-        assert(error.value() == 0);
         std::shared_ptr<iocp_poller> poller_ = std::make_shared<iocp_poller>();
 
 #endif

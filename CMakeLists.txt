@@ -14,6 +14,7 @@ endif()
 include_directories(include)
 include_directories(src/system)
 include_directories(src/time)
+include_directories(src/errors)
 
 # auto create libcurl dir in ${PROJECT_BINARY_DIR}
 #link_directories(${PROJECT_BINARY_DIR}/libcurl/lib)
@@ -33,7 +34,7 @@ include_directories(
 ####io
 set(io-src-list
   src/io/io.cpp
-#  src/io/io_thread_local_storage.h
+  #  src/io/io_thread_local_storage.h
   src/io/io_event_loop.cpp
   src/io/io_event_fd.cpp
   )
@@ -63,7 +64,7 @@ set(net-src-list
   )
 if(IS_WIN)
   set(net-src-list
-	${net-src-list}
+    ${net-src-list}
     src/net/windows/net_win_tcp_conn.cpp
     src/net/windows/net_win_iocp_tcp_accpeter.cpp
     src/net/windows/net_win_iocp_tcp_accpeter.h
@@ -108,9 +109,26 @@ if(IS_WIN)
     )
 endif()
 
+###errors
+set(errors-src-list
+  src/errors/errors.cpp
+  )
+if(IS_WIN)
+  set(errors-src-list
+    ${errors-src-list}
+    src/errors/windows/errors_windows.cpp
+    )
+endif()
 
 
-add_library(pp ${io-src-list} ${net-src-list} ${fmt-src-list} ${system-src-list} ${bytes-src-list} ${time-src-list})
+
+add_library(pp ${io-src-list}
+  ${net-src-list}
+  ${fmt-src-list}
+  ${system-src-list}
+  ${bytes-src-list}
+  ${time-src-list}
+  ${errors-src-list})
 target_link_libraries(pp ws2_32)
 
 add_subdirectory(test)

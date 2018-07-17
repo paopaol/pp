@@ -41,7 +41,6 @@ namespace io {
         start_write_ = write_handler;
     }
 
-
     void iocp_event_fd::post_read(errors::error_code& error)
     {
         if (start_read_) {
@@ -91,7 +90,8 @@ namespace io {
         }
         active_pending_req_->IoOpt = iocp_event_fd::EV_WRITE;
         active_pending_req_->sent_bytes += active_pending_req_->io_size;
-        if (active_pending_req_->sent_bytes < active_pending_req_->total_bytes) {
+        if (active_pending_req_->sent_bytes
+            < active_pending_req_->total_bytes) {
             // FIXME:need test
             const char* data =
                 active_pending_req_->buffer + active_pending_req_->sent_bytes;

@@ -18,9 +18,12 @@ namespace net {
     class tcp_conn;
     typedef std::shared_ptr<tcp_conn>                          tcp_conn_ref;
     typedef std::function<void(const net::tcp_conn_ref& conn)> error_handler;
-    typedef std::function<void(const net::tcp_conn_ref& conn)> close_handler;
+    typedef std::function<void(const net::tcp_conn_ref&  conn,
+                               const errors::error_code& error)>
+        close_handler;
 
-    typedef std::function<void(const net::tcp_conn_ref&, const _time::time&)>
+    typedef std::function<void(const net::tcp_conn_ref&, const _time::time&,
+                               const errors::error_code& error)>
         connection_handler;
     typedef std::function<void(const net::tcp_conn_ref&, bytes::Buffer&,
                                const _time::time&)>
@@ -44,7 +47,7 @@ namespace net {
         int  close();
         void shutdown();
         void connect_established();
-        void connect_destroyed();
+        void connect_destroyed(const errors::error_code& error);
         bool connected()
         {
             return state == Connected;
@@ -63,7 +66,7 @@ namespace net {
             return user_data_;
         }
 
-        net::socket& socket() 
+        net::socket& socket()
         {
             return socket_;
         }
@@ -76,6 +79,7 @@ namespace net {
         int  write(const void* data, int len, errors::error_code& error);
         void start_read(errors::error_code& error);
         void start_write(const void* data, int len, errors::error_code& error);
+        void write_some_buffer_data(errors::error_code& error);
 
         void shutdown_in_loop();
 
@@ -95,6 +99,7 @@ namespace net {
         addr               remote_;
         addr               local_;
         pp::Any            user_data_;
+		errors::error_code error_;
     };
 }  // namespace net
 }  // namespace pp

@@ -2,7 +2,7 @@
 #include <net/net_tcp_server.h>
 #include <sync/sync_chan.h>
 #include <time/_time.h>
-
+#include <errors/pp_error.h>
 #include <iostream>
 #include <string>
 
@@ -16,21 +16,22 @@ int main(int argc, char* argv)
     errors::error_code error;
     net::tcp_server    server(&loop, net::addr("0.0.0.0", 8080), "echo");
 
-    server.new_connection(
-        [&](const net::tcp_conn_ref& conn, const _time::time& time) {
-            errors::error_code error;
-            if (!conn->connected()) {
-                std::cout << "remote:" << conn->remote_addr(error).string()
-                          << " closed" << std::endl;
-                return;
-            }
-
-            std::cout << time.string()
-                      << " local:" << conn->local_addr(error).string()
-                      << " remote:" << conn->remote_addr(error).string()
-                      << " connected" << std::endl;
-            conn->socket().set_tcp_nodelay(true, error);
-        });
+    server.new_connection([&](const net::tcp_conn_ref&  conn,
+                              const _time::time&        time,
+                              const errors::error_code& error) {
+        errors::error_code err;
+        if (!conn->connected()) {
+            std::cout << "remote:" << conn->remote_addr(err).string()
+                      << " closed "
+                      << " " << error.message() << std::endl;
+            return;
+        }
+        std::cout << time.string()
+                  << " local:" << conn->local_addr(err).string()
+                  << " remote:" << conn->remote_addr(err).string()
+                  << " connected " << std::endl;
+        conn->socket().set_tcp_nodelay(true, err);
+    });
 
     server.message_recved([&](const net::tcp_conn_ref& conn,
                               bytes::Buffer& message, const _time::time& time) {
@@ -61,7 +62,7 @@ int main(int argc, char* argv)
                          [&, conn]() {
                              std::cout << 20 << "close client" << std::endl;
                              conn->shutdown();
-                             loop.quit();
+                             // loop.quit();
                          });
     });
 

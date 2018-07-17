@@ -34,8 +34,9 @@ namespace net {
     };
 
     win_iocp_tcp_accpeter::win_iocp_tcp_accpeter(io::event_loop* loop)
-        : loop_(loop), socket_(AF_INET, SOCK_STREAM,
-                               newsocket(AF_INET, SOCK_STREAM, error_)),
+        : loop_(loop),
+          socket_(AF_INET, SOCK_STREAM,
+                  newsocket(AF_INET, SOCK_STREAM, error_)),
           listen_fd_(std::make_shared<io::iocp_event_fd>(loop, socket_.fd()))
     {
         assert(error_.value() == 0);
@@ -76,6 +77,7 @@ namespace net {
     {
         DWORD recv_bytes = 0;
         int   ret        = 0;
+        int   ecode      = 0;
 
         auto evfd = static_cast<io::iocp_event_fd*>(listen_fd_.get());
         static windows_ex_func_initer ex_func_init(evfd->fd());
@@ -89,9 +91,8 @@ namespace net {
                         sizeof(SOCKADDR_STORAGE), sizeof(SOCKADDR_STORAGE),
                         &recv_bytes, (LPOVERLAPPED) & (request->Overlapped));
 
-        if (!SUCCEEDED_WITH_IOCP(ret)) {
-            error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+        if (!SUCCEEDED_WITH_IOCP(ret, ecode)) {
+            error = hht_make_error_code(static_cast<std::errc>(ecode));
             closesocket(accept_socket);
             return -1;
         }

@@ -1,10 +1,14 @@
 #include <net/net_tcp_conn.h>
 
 #include <bytes/buffer.h>
+#include <errors/pp_error.h>
 #include <fmt/fmt.h>
 #include <hht.h>
 #include <io/io_event_loop.h>
 #include <windows/io_win_iocp_event_fd.h>
+#ifdef WIN32
+#include <windows/errors_windows.h>
+#endif
 
 #include <cassert>
 #include <memory>
@@ -59,6 +63,7 @@ namespace net {
             static_cast<io::iocp_event_fd*>(event_fd_.get());
         evfd->remove_active_request();
         if (evfd->pending_request_size() > 0) {
+            error_ = error;
             return;
         }
 
@@ -66,7 +71,7 @@ namespace net {
         state = DisConnected;
 
         if (close_handler_) {
-            close_handler_(shared_from_this());
+            close_handler_(shared_from_this(), error_);
         }
     }
 
@@ -95,6 +100,8 @@ namespace net {
             msg_read_handler_(shared_from_this(), read_buf_, _time::now());
         }
 
+        write_some_buffer_data(error);
+
         if (evfd->pending_request_size() > 0) {
             return;
         }
@@ -115,21 +122,7 @@ namespace net {
             evfd->remove_active_request();
 
         // write remaining data
-        if (write_buf_.Len() > 0) {
-            int  min_write = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
-            char data[MAX_WSA_BUFF_SIZE] = { 0 };
-            write_buf_.Read(data, sizeof(data));
-
-            evfd->post_write(
-                data, min_write,
-                std::bind(&tcp_conn::start_write, this, std::placeholders::_1,
-                          std::placeholders::_2, std::placeholders::_3),
-                error);
-            if (error.value() != 0) {
-                handle_close(error);
-            }
-            return;
-        }
+        write_some_buffer_data(error);
         //如果不主动投递一个接收请求，
         //那么下次对方发送过来的数据就不会接收到了
 
@@ -151,6 +144,9 @@ namespace net {
             loop_->run_in_loop([&, slice]() {
                 errors::error_code error;
                 write(slice.data(), slice.size(), error);
+                if (error.value() != 0) {
+                    handle_close(error);
+                }
             });
         }
     }
@@ -207,20 +203,43 @@ namespace net {
 
         DWORD recvBytes = 0;
         DWORD flags     = 0;
+        int   ecode     = 0;
 
         io::iocp_event_fd::io_request_ref request =
             evfd->create_io_request(io::event_fd::EV_READ);
         int ret = WSARecv(evfd->fd(), &request.get()->wasbuf, 1, &recvBytes,
                           &flags, &request.get()->Overlapped, NULL);
-        if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
-            int code = ::GetLastError();
-            error    = hht_make_error_code(static_cast<std::errc>(code));
-            printf("%s", error.full_message().c_str());
+        if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
+            error = hht_make_error_code(errors::error::NET_ERROR);
+            error.suffix_msg(errors::windows_errstr(::WSAGetLastError()));
+            // printf("%s", error.full_message().c_str());
             return;
         }
         evfd->queued_pending_request(request);
 
         return;
+    }
+
+    void tcp_conn::write_some_buffer_data(errors::error_code& error)
+    {
+        if (write_buf_.Len() > 0) {
+            int  min_write = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
+            char data[MAX_WSA_BUFF_SIZE] = { 0 };
+            write_buf_.Read(data, sizeof(data));
+
+            write(data, min_write, error);
+
+            // evfd->post_write(
+            //     data, min_write,
+            //     std::bind(&tcp_conn::start_write, this,
+            //     std::placeholders::_1,
+            //               std::placeholders::_2, std::placeholders::_3),
+            //     error);
+            if (error.value() != 0) {
+                handle_close(error);
+            }
+            return;
+        }
     }
 
     void tcp_conn::start_write(const void* data, int len,
@@ -230,18 +249,19 @@ namespace net {
             static_cast<io::iocp_event_fd*>(event_fd_.get());
 
         DWORD sentBytes = 0;
+        int   ecode     = 0;
 
         io::iocp_event_fd::io_request_ref request =
             evfd->create_io_request(io::iocp_event_fd::EV_WRITE);
         memcpy(request.get()->wasbuf.buf, data, len);
-        request.get()->wasbuf.len = len;
+        request.get()->wasbuf.len  = len;
         request.get()->total_bytes = len;
 
         int ret = WSASend(evfd->fd(), &request.get()->wasbuf, 1, &sentBytes, 0,
                           &request.get()->Overlapped, NULL);
-        if (!SUCCEEDED_WITH_IOCP(ret == 0)) {
-            error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+        if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
+            error = hht_make_error_code(errors::error::NET_ERROR);
+            error.suffix_msg(errors::windows_errstr(ecode));
             return;
         }
         evfd->queued_pending_request(request);
@@ -320,7 +340,8 @@ namespace net {
         assert(state == Connecting);
         state = Connected;
         if (connection_handler_) {
-            connection_handler_(shared_from_this(), _time::time());
+            connection_handler_(shared_from_this(), _time::time(),
+                                errors::error_code());
         }
         event_fd_->tie(shared_from_this());
         errors::error_code error;
@@ -334,7 +355,7 @@ namespace net {
         }
     }
 
-    void tcp_conn::connect_destroyed()
+    void tcp_conn::connect_destroyed(const errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
@@ -343,10 +364,10 @@ namespace net {
 
         if (state == DisConnected) {
             if (connection_handler_) {
-                connection_handler_(shared_from_this(), _time::now());
+                connection_handler_(shared_from_this(), _time::now(), error);
             }
-            errors::error_code error;
-            evfd->remove_event(error);
+            errors::error_code err;
+            evfd->remove_event(err);
         }
     }
 }  // namespace net

@@ -60,9 +60,6 @@ namespace io {
         // now, update it
         if (event->enabled_event() & iocp_event_fd::EV_READ) {
             event->post_read(error);
-            if (error.value() != 0) {
-                std::cerr << error.full_message() << std::endl;
-            }
         }
         if (event->enabled_event() & iocp_event_fd::EV_ACCPET) {
             event->post_accpet(error);

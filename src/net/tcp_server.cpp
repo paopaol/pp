@@ -57,23 +57,24 @@ namespace net {
 
         conn->connected(handle_new_conn);
         conn->data_recved(handle_recved_data);
-        conn->closed([&](const net::tcp_conn_ref& conn) {
-            remove_from_conn_list(conn);
+        conn->closed([&](const net::tcp_conn_ref&  conn,
+                         const errors::error_code& error) {
+            remove_from_conn_list(conn, error);
         });
         conn->connect_established();
     }
 
-    void tcp_server::remove_from_conn_list(const net::tcp_conn_ref& conn)
+    void tcp_server::remove_from_conn_list(const net::tcp_conn_ref&  conn,
+                                           const errors::error_code& error)
     {
-        errors::error_code error;
-        std::string        remote = conn->remote_addr(error).string();
+        errors::error_code err_tmp;
+        std::string        remote = conn->remote_addr(err_tmp).string();
 
         auto it = conn_list_.find(remote);
         if (it != conn_list_.end()) {
             conn_list_.erase(it);
-            conn->connect_destroyed();
+            conn->connect_destroyed(error);
         }
-        int i = conn.use_count();
     }
 }  // namespace net
 }  // namespace pp
