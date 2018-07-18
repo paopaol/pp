@@ -5,8 +5,11 @@
 namespace pp {
 namespace io {
     event_fd::event_fd(event_loop* loop, int fd)
-        : event_loop_(loop), fd_(fd), enabled_event_(EV_NONE),
-          active_event_(EV_NONE), tied_(false)
+        : event_loop_(loop),
+          fd_(fd),
+          enabled_event_(EV_NONE),
+          active_event_(EV_NONE),
+          tied_(false)
     {
     }
 
@@ -83,6 +86,7 @@ namespace io {
         if (active_event_ & EV_ERROR && handler_error_) {
             handler_error_(error);
         }
+        active_event_ = EV_NONE;
     }
     void event_fd::handle_event()
     {
@@ -97,5 +101,5 @@ namespace io {
             handle_event_with_guard();
         }
     }
-}
-}
+}  // namespace io
+}  // namespace pp

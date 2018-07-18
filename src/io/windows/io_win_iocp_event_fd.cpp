@@ -106,6 +106,7 @@ namespace io {
         else if (active_pending_req_->IoOpt & iocp_event_fd::EV_WRITE) {
             handle_write_done();
         }
+        active_event_ = event_fd::EV_NONE;
     }
 
     void iocp_event_fd::handle_event()

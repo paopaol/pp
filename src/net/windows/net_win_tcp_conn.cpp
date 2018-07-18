@@ -26,6 +26,8 @@ namespace net {
     {
         event_fd_->data_recved(
             [&](errors::error_code& error) { handle_read(error); });
+        event_fd_->set_write_handler(
+            [&](errors::error_code& error) { handle_write(error); });
 
         event_fd_->closed(
             [&](errors::error_code& error) { handle_close(error); });
@@ -55,7 +57,7 @@ namespace net {
             static_cast<io::iocp_event_fd*>(event_fd_.get());
         evfd->remove_active_request();
         if (evfd->pending_request_size() > 0) {
-            error_ = error;
+            err_ = error;
             return;
         }
 
@@ -63,7 +65,7 @@ namespace net {
         state = DisConnected;
 
         if (close_handler_) {
-            close_handler_(shared_from_this(), error_);
+            close_handler_(shared_from_this(), err_);
         }
     }
 
@@ -81,11 +83,11 @@ namespace net {
             msg_read_handler_(shared_from_this(), read_buf_, _time::now());
         }
 
-        write_some_buffer_data(error);
-        if (error.value() != 0) {
-            handle_close(error);
-            return;
-        }
+        // write_some_buffer_data(error);
+        // if (error.value() != 0) {
+        //   handle_close(error);
+        //  return;
+        //}
 
         if (evfd->pending_request_size() > 0) {
             return;
@@ -104,6 +106,7 @@ namespace net {
 
         io::iocp_event_fd::io_request_ref unused =
             evfd->remove_active_request();
+        assert(unused);
 
         // write remaining data
         // if has remaining data, this call will add
@@ -203,7 +206,6 @@ namespace net {
             return;
         }
         evfd->queued_pending_request(request);
-
         return;
     }
 
@@ -240,6 +242,7 @@ namespace net {
             error.suffix_msg(errors::windows_errstr(ecode));
             return;
         }
+
         evfd->queued_pending_request(request);
     }
 
@@ -319,21 +322,28 @@ namespace net {
         assert(loop_->in_created_thread());
         assert(state == Connecting);
         state = Connected;
-        if (connection_handler_) {
-            connection_handler_(shared_from_this(), _time::time(),
-                                errors::error_code());
-        }
+
         event_fd_->tie(shared_from_this());
         errors::error_code error;
-        enable_read(error);
-        if (error.value() != 0 && connection_handler_) {
-            handle_close(error);
-            return;
-        }
+
         evfd->enable_write(error, std::bind(&tcp_conn::start_write, this,
                                             std::placeholders::_1,
                                             std::placeholders::_2,
                                             std::placeholders::_3));
+        // first, if no pending io request, we push one read request
+        // at least, there was must one read request
+        if (evfd->pending_request_size() == 0) {
+            enable_read(error);
+        }
+
+        if (connection_handler_) {
+            connection_handler_(shared_from_this(), _time::time(),
+                                errors::error_code());
+        }
+
+        if (error.value() != 0 && connection_handler_) {
+            handle_close(error);
+        }
     }
 
     void tcp_conn::connect_destroyed(const errors::error_code& error)

@@ -1,10 +1,10 @@
+#include <errors/pp_error.h>
 #include <io/io_event_loop.h>
+#include <iostream>
 #include <net/net_tcp_server.h>
+#include <string>
 #include <sync/sync_chan.h>
 #include <time/_time.h>
-#include <errors/pp_error.h>
-#include <iostream>
-#include <string>
 
 #include <hht.h>
 
@@ -31,6 +31,7 @@ int main(int argc, char* argv)
                   << " remote:" << conn->remote_addr(err).string()
                   << " connected " << std::endl;
         conn->socket().set_tcp_nodelay(true, err);
+        // conn->write("hello world\n", 12);
     });
 
     server.message_recved([&](const net::tcp_conn_ref& conn,
@@ -47,7 +48,9 @@ int main(int argc, char* argv)
                            "charset=ISO-8859-1\n\n<html><head><title>Wrox "
                            "Homepage</title></head><body><!--body goes here "
                            "--><p>hello pp</p></body></html>\n";
-
+        conn->write(resp.data(), resp.length());
+        // conn->shutdown();
+#if 0
         for (int i = 1; i < 4; i++) {
             std::cout << "install timer" << i << std::endl;
             _time::new_timer(_time::timer::oneshot, _time::Second * 5 * i,
@@ -64,23 +67,23 @@ int main(int argc, char* argv)
                              conn->shutdown();
                              // loop.quit();
                          });
+#endif
     });
 
     _time::timer_ref timer;
 
     timer = _time::new_timer(_time::timer::interval, _time::Second * 1, [&]() {
-        std::cout << "interval ticks" << std::endl;
         static int count = 0;
         if (++count == 5) {
-            timer->cancel();
+            // timer->cancel();
             // loop.quit();
         }
+        std::cout << "interval ticks " << count << std::endl;
     });
     _time::new_timer(_time::timer::oneshot, _time::Second * 1,
                      [&]() { std::cout << "oneshot timer" << std::endl; });
 
     server.listen_and_serv(error);
     loop.exec();
-    // t.join();
     return 0;
 }

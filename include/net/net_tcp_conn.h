@@ -96,7 +96,7 @@ namespace net {
         addr               remote_;
         addr               local_;
         pp::Any            user_data_;
-        errors::error_code error_;
+        errors::error_code err_;
     };
 }  // namespace net
 }  // namespace pp
