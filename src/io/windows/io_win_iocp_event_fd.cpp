@@ -96,10 +96,6 @@ namespace io {
             if (guard) {
                 handle_event_with_guard();
             }
-            else {
-                int a = 0;
-                a++;
-            }
         }
         else {
             handle_event_with_guard();
