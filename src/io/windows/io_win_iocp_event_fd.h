@@ -45,9 +45,6 @@ namespace io {
 
         void handle_event();
         void handle_event_with_guard();
-        int  post_write(const char* data, int len,
-                        const start_write_handler& write_handler,
-                        errors::error_code&        error);
         int  post_accpet(errors::error_code& error);
 
         io_request_ref remove_active_request();

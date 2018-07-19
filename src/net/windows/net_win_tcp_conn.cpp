@@ -104,9 +104,19 @@ namespace net {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
 
-        io::iocp_event_fd::io_request_ref unused =
+        io::iocp_event_fd::io_request_ref active =
             evfd->remove_active_request();
-        assert(unused);
+        assert(active);
+
+        active->sent_bytes += active->io_size;
+        if (active->sent_bytes < active->total_bytes) {
+            evfd->queued_pending_request(active);
+            // FIXME:need test
+            const char* data = active->buffer + active->sent_bytes;
+            int         len  = active->total_bytes - active->sent_bytes;
+
+            start_write(data, len, error);
+        }
 
         // write remaining data
         // if has remaining data, this call will add
@@ -328,10 +338,6 @@ namespace net {
         if (connection_handler_) {
             connection_handler_(shared_from_this(), _time::time(),
                                 errors::error_code());
-        }
-
-        if (error.value() != 0 && connection_handler_) {
-            handle_close(error);
         }
     }
 
