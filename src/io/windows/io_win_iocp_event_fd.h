@@ -42,8 +42,6 @@ namespace io {
         void enable_accpet(errors::error_code&         error,
                            const start_accpet_handler& start_handler,
                            const accpet_done_handler&  done_handler);
-        void enable_write(errors::error_code&        error,
-                          const start_write_handler& write_handler);
 
         void handle_event();
         void handle_event_with_guard();

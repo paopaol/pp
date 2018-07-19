@@ -169,19 +169,11 @@ namespace net {
         }
 
         if (len <= MAX_WSA_BUFF_SIZE) {
-            evfd->post_write(
-                ( const char* )data, len,
-                std::bind(&tcp_conn::start_write, this, std::placeholders::_1,
-                          std::placeholders::_2, std::placeholders::_3),
-                error);
+            start_write(( const char* )data, len, error);
             return 0;
         }
         // data is too long, only write some
-        evfd->post_write(( const char* )data, MAX_WSA_BUFF_SIZE,
-                         std::bind(&tcp_conn::start_write, this,
-                                   std::placeholders::_1, std::placeholders::_2,
-                                   std::placeholders::_3),
-                         error);
+        start_write(( const char* )data, MAX_WSA_BUFF_SIZE, error);
         write_buf_.Write(( char* )data + MAX_WSA_BUFF_SIZE,
                          len - MAX_WSA_BUFF_SIZE);
         return 0;
@@ -290,10 +282,6 @@ namespace net {
     void tcp_conn::enable_read(errors::error_code& error)
     {
         event_fd_->enable_read(error);
-        start_read(error);
-        // if (error.value() != 0) {
-        //    handle_close(error);
-        //}
     }
 
     void tcp_conn::shutdown()
@@ -326,14 +314,15 @@ namespace net {
         event_fd_->tie(shared_from_this());
         errors::error_code error;
 
-        evfd->enable_write(error, std::bind(&tcp_conn::start_write, this,
-                                            std::placeholders::_1,
-                                            std::placeholders::_2,
-                                            std::placeholders::_3));
         // first, if no pending io request, we push one read request
         // at least, there was must one read request
         if (evfd->pending_request_size() == 0) {
             enable_read(error);
+            start_read(error);
+            if (error.value() != 0) {
+                handle_close(error);
+                return;
+            }
         }
 
         if (connection_handler_) {

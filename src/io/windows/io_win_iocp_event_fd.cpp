@@ -28,11 +28,6 @@ namespace io {
         event_loop_->update_event_fd(this, error);
     }
 
-    void iocp_event_fd::enable_write(errors::error_code&        error,
-                                     const start_write_handler& write_handler)
-    {
-        start_write_ = write_handler;
-    }
 
     int iocp_event_fd::handle_zero_done()
     {
