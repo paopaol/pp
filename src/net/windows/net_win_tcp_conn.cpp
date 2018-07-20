@@ -22,7 +22,8 @@ namespace net {
           event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd)),
           state(Connecting),
           remote_("", -1),
-          local_("", -1)
+          local_("", -1),
+          bytes_written_(0)
     {
         event_fd_->data_recved(
             [&](errors::error_code& error) { handle_read(error); });
@@ -44,6 +45,11 @@ namespace net {
     void tcp_conn::data_recved(const message_handler& handler)
     {
         msg_read_handler_ = handler;
+    }
+
+    void tcp_conn::data_write_finished(const write_finished_handler& handler)
+    {
+        write_finished_handler_ = handler;
     }
 
     void tcp_conn::closed(const close_handler& handler)
@@ -116,6 +122,15 @@ namespace net {
             int         len  = active->total_bytes - active->sent_bytes;
 
             start_write(data, len, error);
+            // FIXME:if error maybe handle_close
+        }
+
+        bytes_written_ += active->sent_bytes;
+        if (write_buf_.Len() == 0) {
+            if (write_finished_handler_) {
+                write_finished_handler_(bytes_written_);
+            }
+            bytes_written_ = 0;
         }
 
         // write remaining data
@@ -124,6 +139,7 @@ namespace net {
         write_some_buffer_data(error);
         if (error.value() != 0) {
             handle_close(error);
+            return;
         }
 
         // if already have pending io request,

@@ -31,7 +31,10 @@ int main(int argc, char* argv)
                   << " remote:" << conn->remote_addr(err).string()
                   << " connected " << std::endl;
         conn->socket().set_tcp_nodelay(true, err);
-		conn->write("hello world\n", 12);
+        conn->data_write_finished([&](int bytes_written) {
+            std::cout << bytes_written << "bytes write_finished" << std::endl;
+        });
+        // conn->write("hello world\n", 12);
     });
 
     server.message_recved([&](const net::tcp_conn_ref& conn,
@@ -49,7 +52,8 @@ int main(int argc, char* argv)
                            "Homepage</title></head><body><!--body goes here "
                            "--><p>hello pp</p></body></html>\n";
         conn->write(resp.data(), resp.length());
-        //conn->shutdown();
+        // fwrite(s.data(), 1, s.size(), stdout);
+        // conn->shutdown();
 #if 0
         for (int i = 1; i < 4; i++) {
             std::cout << "install timer" << i << std::endl;

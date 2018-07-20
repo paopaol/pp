@@ -20,7 +20,8 @@ namespace net {
     typedef std::function<void(const net::tcp_conn_ref& conn)> error_handler;
     typedef std::function<void(const net::tcp_conn_ref&  conn,
                                const errors::error_code& error)>
-        close_handler;
+                                                   close_handler;
+    typedef std::function<void(int bytes_written)> write_finished_handler;
 
     typedef std::function<void(const net::tcp_conn_ref&, const _time::time&,
                                const errors::error_code& error)>
@@ -38,6 +39,7 @@ namespace net {
         void connected(const connection_handler& handler);
         void closed(const close_handler& handler);
         void data_recved(const message_handler& handler);
+        void data_write_finished(const write_finished_handler& handler);
 
         void write(const void* data, int len);
         void write(bytes::Buffer& buffer);
@@ -82,21 +84,23 @@ namespace net {
 
         DISABLE_COPY_CONSTRCT(tcp_conn);
 
-        io::event_loop*    loop_;
-        net::socket        socket_;
-        io::event_fd_ref   event_fd_;
-        message_handler    msg_read_handler_;
-        message_handler    msg_write_handler_;
-        close_handler      close_handler_;
-        error_handler      error_handler_;
-        connection_handler connection_handler_;
-        bytes::Buffer      read_buf_;
-        bytes::Buffer      write_buf_;
-        ConnStatus         state;
-        addr               remote_;
-        addr               local_;
-        pp::Any            user_data_;
-        errors::error_code err_;
+        io::event_loop*        loop_;
+        net::socket            socket_;
+        io::event_fd_ref       event_fd_;
+        message_handler        msg_read_handler_;
+        message_handler        msg_write_handler_;
+        close_handler          close_handler_;
+        error_handler          error_handler_;
+        connection_handler     connection_handler_;
+        write_finished_handler write_finished_handler_;
+        bytes::Buffer          read_buf_;
+        bytes::Buffer          write_buf_;
+        ConnStatus             state;
+        addr                   remote_;
+        addr                   local_;
+        pp::Any                user_data_;
+        errors::error_code     err_;
+        int                    bytes_written_;
     };
 }  // namespace net
 }  // namespace pp

@@ -18,7 +18,7 @@ pp is a c++ network frameworks.
   * [ ] better error reporter
   
 ### tcp/udp connection ###
-  * [ ] write finished signal
+  * [x] write finished signal
   * [ ] write buffer high water signal
 
 ### multithread ###
