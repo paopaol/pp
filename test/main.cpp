@@ -31,7 +31,7 @@ int main(int argc, char* argv)
                   << " remote:" << conn->remote_addr(err).string()
                   << " connected " << std::endl;
         conn->socket().set_tcp_nodelay(true, err);
-		//conn->write("hello world\n", 12);
+		conn->write("hello world\n", 12);
     });
 
     server.message_recved([&](const net::tcp_conn_ref& conn,

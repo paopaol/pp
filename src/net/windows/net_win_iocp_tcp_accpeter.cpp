@@ -66,10 +66,8 @@ namespace net {
 
         socket_.listen(error);
         ev_fd->enable_accpet(
-            error,
-            std::bind(&win_iocp_tcp_accpeter::start_accpet, this,
-                      std::placeholders::_1),
-            std::bind(&win_iocp_tcp_accpeter::accpet_done, this));
+            std::bind(&win_iocp_tcp_accpeter::accpet_done, this), error);
+        start_accpet(error);
         return 0;
     }
 
@@ -115,11 +113,9 @@ namespace net {
         int ret = ::setsockopt(client_fd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                                ( char* )&active->io_fd, sizeof(active->io_fd));
         evfd->enable_accpet(
-            error,
-            std::bind(&win_iocp_tcp_accpeter::start_accpet, this,
-                      std::placeholders::_1),
-            std::bind(&win_iocp_tcp_accpeter::accpet_done, this));
+            std::bind(&win_iocp_tcp_accpeter::accpet_done, this), error);
 
+        start_accpet(error);
         handle_accpet_event(client_fd);
     }
 }  // namespace net

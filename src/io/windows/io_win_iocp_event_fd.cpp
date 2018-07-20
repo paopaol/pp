@@ -18,12 +18,10 @@ namespace io {
     {
     }
 
-    void iocp_event_fd::enable_accpet(errors::error_code&         error,
-                                      const start_accpet_handler& start_handler,
-                                      const accpet_done_handler&  done_handler)
+    void iocp_event_fd::enable_accpet(const accpet_done_handler& done_handler,
+                                      errors::error_code&        error)
     {
         enabled_event_ |= iocp_event_fd::EV_ACCPET;
-        start_accpet_       = start_handler;
         handle_accpet_done_ = done_handler;
         event_loop_->update_event_fd(this, error);
     }
@@ -135,12 +133,5 @@ namespace io {
         io_request_list_[request.get()] = request;
     }
 
-    int iocp_event_fd::post_accpet(errors::error_code& error)
-    {
-        if (start_accpet_) {
-            start_accpet_(error);
-        }
-        return 0;
-    }
 }  // namespace io
 }  // namespace pp

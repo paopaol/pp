@@ -20,7 +20,6 @@ namespace pp {
 namespace io {
 
     typedef std::function<void(errors::error_code& error)> accpet_done_handler;
-    typedef std::function<void(errors::error_code& error)> start_accpet_handler;
     typedef std::function<void(errors::error_code& error)> start_read_handler;
     typedef std::function<void(const char* data, int len,
                                errors::error_code& error)>
@@ -39,13 +38,11 @@ namespace io {
         iocp_event_fd(event_loop* loop, int fd);
         ~iocp_event_fd() {}
 
-        void enable_accpet(errors::error_code&         error,
-                           const start_accpet_handler& start_handler,
-                           const accpet_done_handler&  done_handler);
+        void enable_accpet(const accpet_done_handler& done_handler,
+                           errors::error_code&        error);
 
         void handle_event();
         void handle_event_with_guard();
-        int  post_accpet(errors::error_code& error);
 
         io_request_ref remove_active_request();
         int            pending_request_size();
@@ -64,7 +61,6 @@ namespace io {
         int handle_zero_done();
 
         accpet_done_handler                     handle_accpet_done_;
-        start_accpet_handler                    start_accpet_;
         start_read_handler                      start_read_;
         start_write_handler                     start_write_;
         std::map<io_request_t*, io_request_ref> io_request_list_;

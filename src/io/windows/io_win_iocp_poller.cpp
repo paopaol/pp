@@ -57,10 +57,6 @@ namespace io {
             error.clear();
         }
 
-        if (event->enabled_event() & iocp_event_fd::EV_ACCPET) {
-            event->post_accpet(error);
-        }
-
         return;
     }
 
