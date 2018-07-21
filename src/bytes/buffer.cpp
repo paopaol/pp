@@ -44,7 +44,8 @@ namespace bytes {
     size_t Buffer::Write(const char* d, int len)
     {
         if (leftSpace() < len) {
-            growSpace(len);
+            Optimization();
+            growSpace(b.size() + len);
         }
         std::copy(d, d + len, beginWrite());
         hasWritten(len);
@@ -80,7 +81,7 @@ namespace bytes {
 
     int Buffer::Cap()
     {
-        return b.capacity();
+        return b.size();
     }
 
     void Buffer::Reset()
@@ -119,6 +120,7 @@ namespace bytes {
         std::copy(begin() + ridx, begin() + widx, begin());
         ridx = 0;
         widx = ridx + len;
+        assert(widx < b.size());
     }
 
     // ReadFrom
@@ -127,17 +129,17 @@ namespace bytes {
     void Buffer::growSpace(int len)
     {
         b.resize(widx + len);
-        Optimization();
     }
 
     int Buffer::leftSpace()
     {
-        return b.capacity() - widx;
+        return b.size() - widx;
     }
 
     void Buffer::hasWritten(int len)
     {
         widx += len;
+        assert(widx <= b.size());
     }
     void Buffer::hasReaded(int len)
     {

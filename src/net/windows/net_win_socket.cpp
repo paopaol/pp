@@ -141,7 +141,7 @@ namespace net {
 
     int socket::listen(errors::error_code& error)
     {
-        int ret = ::listen(fd_, SOMAXCONN);
+        int ret = ::listen(fd_, 4096);
         if (ret < 0) {
             error = hht_make_error_code(
                 static_cast<std::errc>(::WSAGetLastError()));

@@ -1,6 +1,8 @@
 #include <io/io_event_loop.h>
 #include <time/_time.h>
 
+#include <assert.h>
+
 #ifdef WIN32
 #include <windows/sys_win_thread_local_storage.h>
 #endif
