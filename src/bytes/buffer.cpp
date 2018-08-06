@@ -45,6 +45,8 @@ namespace bytes {
     {
         if (leftSpace() < len) {
             Optimization();
+        }
+        if (leftSpace() < len) {
             growSpace(b.size() + len);
         }
         std::copy(d, d + len, beginWrite());
