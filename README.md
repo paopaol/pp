@@ -8,14 +8,14 @@ pp is a c++ network frameworks.
   
 ## functions ##
   * [x] tcp_server
-  * [ ] tcp_client
+  * [x] tcp_client
   * [ ] udp_server
   * [ ] udp_client
   * [ ] http_server
   * [ ] http_client
   * [x] timer(timer heap)
   * [ ] timer(timer circle)
-  * [ ] better error reporter
+  * [x] better error reporter
   
 ### tcp/udp connection ###
   * [x] write finished signal
@@ -28,3 +28,11 @@ pp is a c++ network frameworks.
 | platform | compiler         |
 |----------|------------------|
 | windows  | msvc2015 update3 |
+
+### examples
+  * [ ] http downloader
+  * [ ] http client
+  * [ ] tcp echo server
+  * [ ] tcp echo client
+  * [ ] socks5 server
+
