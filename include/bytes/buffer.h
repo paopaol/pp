@@ -24,12 +24,12 @@ namespace bytes {
         char ReadByte();
 
         // Read N Bytes from buffer
-        size_t ReadBytes(std::vector<char>& p, int n);
+        size_t ReadBytes(std::vector<char>& p, size_t n);
 
-        size_t Read(char* buffer, int n);
+        size_t Read(char* buffer, size_t n);
 
         // write data into buffer
-        size_t Write(const char* d, int len);
+        size_t Write(const char* d, size_t len);
 
         size_t Write(const std::string& s);
 
@@ -37,16 +37,16 @@ namespace bytes {
 
         void UnReadByte(/*error*/);
 
-        void UnReadBytes(int n /*,error &e*/);
+        void UnReadBytes(size_t n /*,error &e*/);
 
         // return unreaded data size
-        int Len();
+        size_t Len();
 
-        int Cap();
+        size_t Cap();
 
         void Reset();
 
-        bool PeekAt(std::vector<char>& p, int index, int size);
+        bool PeekAt(std::vector<char>& p, size_t index, size_t size);
 
         void Optimization();
 
@@ -54,13 +54,13 @@ namespace bytes {
         // WriteTo
 
     private:
-        void growSpace(int len);
+        void growSpace(size_t len);
 
-        int leftSpace();
+        size_t leftSpace();
 
-        void hasWritten(int len);
+        void hasWritten(size_t len);
 
-        void hasReaded(int len);
+        void hasReaded(size_t len);
 
         char* beginWrite();
 

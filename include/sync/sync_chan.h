@@ -70,11 +70,11 @@ namespace sync {
             queue_.clear();
         }
 
-        // size_t size()
-        //{
-        //    system::MutexLockGuard  lock(mutex_);
-        //  return queue_.size();
-        //}
+         size_t size()
+        {
+            system::MutexLockGuard  lock(mutex_);
+          return queue_.size();
+        }
         //
         // bool full()
         //{

@@ -8,7 +8,7 @@
 namespace pp {
 namespace errors {
 
-    std::string windows_errstr(int code)
+    std::string win_errstr(int code)
     {
         LPVOID msg;
         FormatMessage(
@@ -20,20 +20,6 @@ namespace errors {
         }
         std::shared_ptr<void> __(nullptr, std::bind(LocalFree, msg));
         return fmt::Sprintf("%d %s", code, msg);
-    }
-
-    Error New(int code)
-    {
-        LPVOID msg;
-        FormatMessage(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
-                | FORMAT_MESSAGE_IGNORE_INSERTS,
-            NULL, code, 0 /*Default language*/, ( LPTSTR )&msg, 0, NULL);
-        if (msg == NULL) {
-            return Error(fmt::Sprintf("%d %s", code, "unkown error"));
-        }
-        std::shared_ptr<void> __(nullptr, std::bind(LocalFree, msg));
-        return Error(fmt::Sprintf("%d %s", code, msg));
     }
 }  // namespace errors
 }  // namespace pp

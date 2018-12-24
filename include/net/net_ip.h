@@ -1,6 +1,11 @@
-#include <net.h>
+#include "net.h"
 
 #include <vector>
+
+#ifdef WIN32
+#include <WinSock2.h>
+#else
+#endif
 
 namespace pp {
 namespace net {
@@ -23,5 +28,14 @@ namespace net {
     private:
         std::vector<char> ip;
     };
+
+    void ip4_addr(const char* ip, int port, struct sockaddr_in* addr)
+    {
+        memset(addr, 0, sizeof(*addr));
+        addr->sin_family      = AF_INET;
+        addr->sin_addr.s_addr = inet_addr(ip);
+        addr->sin_port        = htons(port);
+    }
+
 }  // namespace net
 }  // namespace pp

@@ -61,7 +61,7 @@ namespace errors {
             return msg;
         }
 
-        std::string full_message()
+        std::string full_message() const
         {
             std::string msg = message();
             for (auto line = call_stack_.begin(); line != call_stack_.end();

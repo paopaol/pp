@@ -20,6 +20,7 @@ namespace pp {
 namespace io {
 
     typedef std::function<void(errors::error_code& error)> accpet_done_handler;
+    typedef std::function<void(errors::error_code& error)> connect_done_handler;
     typedef std::function<void(errors::error_code& error)> start_read_handler;
     typedef std::function<void(const char* data, int len,
                                errors::error_code& error)>
@@ -33,14 +34,16 @@ namespace io {
         static const int EV_ACCPET = event_fd::EV_ERROR
                                      << 1;  // only for windows
                                             // only for windows
-        static const int EV_WAKEUP = iocp_event_fd::EV_ACCPET << 1;
+        static const int EV_WAKEUP  = iocp_event_fd::EV_ACCPET << 1;
+        static const int EV_CONNECT = iocp_event_fd::EV_WAKEUP << 1;
 
         iocp_event_fd(event_loop* loop, int fd);
         ~iocp_event_fd() {}
 
         void enable_accpet(const accpet_done_handler& done_handler,
                            errors::error_code&        error);
-
+        void enable_connect(const connect_done_handler& done_handler,
+                            errors::error_code&         error);
         void handle_event();
         void handle_event_with_guard();
 
@@ -59,8 +62,10 @@ namespace io {
         int handle_accept_done();
         int handle_write_done();
         int handle_zero_done();
+        int handle_connnect_done();
 
         accpet_done_handler                     handle_accpet_done_;
+        connect_done_handler                    handle_connect_done_;
         start_read_handler                      start_read_;
         start_write_handler                     start_write_;
         std::map<io_request_t*, io_request_ref> io_request_list_;
@@ -70,12 +75,12 @@ namespace io {
 #define MAX_WSA_BUFF_SIZE (2 * (sizeof(SOCKADDR_STORAGE) + 16) + 5)
     struct io_request_t {
         io_request_t()
-            : total_bytes(0),
-              sent_bytes(0),
-              IoOpt(iocp_event_fd::EV_NONE),
-              accpet_fd(-1),
-              io_fd(-1),
-              io_size(0)
+            : total_bytes(0)
+            , sent_bytes(0)
+            , IoOpt(iocp_event_fd::EV_NONE)
+            , accpet_fd(-1)
+            , io_fd(-1)
+            , io_size(0)
         {
             ZeroMemory(&Overlapped, sizeof(Overlapped));
             wasbuf.buf = buffer;

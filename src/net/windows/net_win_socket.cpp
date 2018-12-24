@@ -10,6 +10,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errors/hht_error.h>
+#include <errors/pp_error.h>
+#include <windows/errors_windows.h>
 
 //#include <filesystem>
 
@@ -44,7 +47,8 @@ namespace net {
         int fd = ::WSASocket(af, type, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
         if (fd == INVALID_SOCKET) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
             return -1;
         }
         return fd;
@@ -77,7 +81,8 @@ namespace net {
                                ( const char* )&_set, sizeof(_set));
         if (ret != 0) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
             return -1;
         }
         return 0;
@@ -92,7 +97,8 @@ namespace net {
                                ( const char* )&_set, sizeof(_set));
         if (ret != 0) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
             return -1;
         }
 #endif
@@ -106,7 +112,8 @@ namespace net {
                                ( const char* )&_set, sizeof(_set));
         if (ret != 0) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
             return -1;
         }
         return 0;
@@ -118,7 +125,8 @@ namespace net {
         int           ret = ::ioctlsocket(fd_, FIONBIO, &set);
         if (ret != 0) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
             return -1;
         }
         return 0;
@@ -131,7 +139,8 @@ namespace net {
         saddr.sin_port   = htons(addr.Port);
         if (::inet_pton(af_, addr.Ip.c_str(), &saddr.sin_addr) <= 0) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
             return -1;
         }
         int ret = ::bind(fd_, ( const struct sockaddr* )&saddr,
@@ -141,10 +150,11 @@ namespace net {
 
     int socket::listen(errors::error_code& error)
     {
-        int ret = ::listen(fd_, 4096);
+        int ret = ::listen(fd_, 5);
         if (ret < 0) {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
         }
         return ret;
     }
@@ -167,7 +177,9 @@ namespace net {
         }
         else {
             int e = ::WSAGetLastError();
-            error = hht_make_error_code(static_cast<std::errc>(e));
+            error = hht_make_error_code(
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(e));
         }
         return addr;
     }
@@ -183,7 +195,8 @@ namespace net {
         }
         else {
             error = hht_make_error_code(
-                static_cast<std::errc>(::WSAGetLastError()));
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
         }
         return addr;
     }

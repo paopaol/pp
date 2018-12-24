@@ -40,7 +40,7 @@ namespace io {
         void enable_write(errors::error_code& error);
         int  enabled_event();
 
-        inline int fd()
+        inline  int fd()
         {
             return fd_;
         };

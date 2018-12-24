@@ -1,3 +1,7 @@
+#ifndef NET_TCP_SERVER_H
+#define NET_TCP_SERVER_H
+
+
 #include <map>
 #include <net/net.h>
 #include <net/net_socket_accpeter.h>
@@ -19,7 +23,7 @@ namespace net {
         bool listen_and_serv(errors::error_code& error);
 
     private:
-        void on_new_conn(int fd);
+        void on_new_conn(int fd, const errors::error_code& error);
         void remove_from_conn_list(const net::tcp_conn_ref&  conn,
                                    const errors::error_code& error);
 
@@ -29,8 +33,11 @@ namespace net {
         std::string                              server_name_;
         addr                                     bind_addr_;
 
-        connection_handler handle_new_conn;
+        connection_handler handle_new_conn_;
         message_handler    handle_recved_data;
     };
 }  // namespace net
 }  // namespace pp
+
+
+#endif

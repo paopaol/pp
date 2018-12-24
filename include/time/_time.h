@@ -20,7 +20,7 @@ namespace io {
 
 namespace pp {
 namespace _time {
-    typedef int64_t Duration;
+    typedef uint64_t Duration;
 
     const Duration Nanosecond  = 1;
     const Duration Microsecond = 1000 * Nanosecond;

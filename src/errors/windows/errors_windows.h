@@ -5,7 +5,7 @@
 
 namespace pp {
 	namespace errors {
-		extern std::string windows_errstr(int code);
+		extern std::string win_errstr(int code);
 	}
 }
 

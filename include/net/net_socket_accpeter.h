@@ -2,11 +2,12 @@
 #define NET_LISTENER_H
 
 #include <functional>
-#include <hht.h>
+#include <errors/hht_error.h>
 
 namespace pp {
 namespace net {
-    typedef std::function<void(int fd)> new_conn_handler;
+    typedef std::function<void(int fd, const errors::error_code& error)>
+        new_conn_handler;
 }  // namespace net
 }  // namespace pp
 

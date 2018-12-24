@@ -41,7 +41,8 @@ namespace net {
         void data_recved(const message_handler& handler);
         void data_write_finished(const write_finished_handler& handler);
 
-        void write(const void* data, int len);
+        void async_read();
+        void write(const void* data, size_t len);
         void write(bytes::Buffer& buffer);
 
         int  close();
@@ -72,12 +73,13 @@ namespace net {
         }
 
     private:
-        void handle_read(errors::error_code& error);
-        void handle_write(errors::error_code& error);
+        void read_done(errors::error_code& error);
+        void write_done(errors::error_code& error);
         void handle_close(const errors::error_code& error);
-        int  write(const void* data, int len, errors::error_code& error);
+        int  write(const void* data, size_t len, errors::error_code& error);
         void start_read(errors::error_code& error);
-        void start_write(const void* data, int len, errors::error_code& error);
+        void start_write(const void* data, size_t len,
+                         errors::error_code& error);
         void write_some_buffer_data(errors::error_code& error);
 
         void shutdown_in_loop();
@@ -101,6 +103,7 @@ namespace net {
         pp::Any                user_data_;
         errors::error_code     err_;
         int                    bytes_written_;
+        bool                   pending_read_;
     };
 }  // namespace net
 }  // namespace pp

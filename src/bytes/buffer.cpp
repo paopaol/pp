@@ -20,7 +20,7 @@ namespace bytes {
     }
 
     // Read N Bytes from buffer
-    size_t Buffer::ReadBytes(std::vector<char>& p, int n)
+    size_t Buffer::ReadBytes(std::vector<char>& p, size_t n)
     {
         assert(n >= 0 && "buffer::readbytes(), bad input paramer");
 
@@ -31,7 +31,7 @@ namespace bytes {
         return n;
     }
 
-    size_t Buffer::Read(char* buffer, int n)
+    size_t Buffer::Read(char* buffer, size_t n)
     {
         assert(n >= 0 && "buffer::read(), bad input paramer");
         n = n > Len() ? Len() : n;
@@ -41,13 +41,13 @@ namespace bytes {
     }
 
     // write data into buffer
-    size_t Buffer::Write(const char* d, int len)
+    size_t Buffer::Write(const char* d, size_t len)
     {
         if (leftSpace() < len) {
             Optimization();
         }
         if (leftSpace() < len) {
-            growSpace(b.size() + len);
+            growSpace(static_cast<size_t>(b.size() + len));
         }
         std::copy(d, d + len, beginWrite());
         hasWritten(len);
@@ -55,12 +55,12 @@ namespace bytes {
     }
     size_t Buffer::Write(const std::string& s)
     {
-        return Write(s.c_str(), s.size());
+        return Write(s.c_str(), static_cast<size_t>(s.size()));
     }
 
     size_t Buffer::Write(const std::vector<char>& p)
     {
-        return Write(p.data(), p.size());
+        return Write(p.data(), static_cast<size_t>(p.size()));
     }
 
     void Buffer::UnReadByte(/*error*/)
@@ -68,7 +68,7 @@ namespace bytes {
         UnReadBytes(1);
     }
 
-    void Buffer::UnReadBytes(int n /*,error &e*/)
+    void Buffer::UnReadBytes(size_t n /*,error &e*/)
     {
         assert((lastRead() - begin()) >= n
                && "buffer::unreadbytes too much data size");
@@ -76,12 +76,12 @@ namespace bytes {
     }
 
     // return unreaded data size
-    int Buffer::Len()
+    size_t Buffer::Len()
     {
         return widx - ridx;
     }
 
-    int Buffer::Cap()
+    size_t Buffer::Cap()
     {
         return b.size();
     }
@@ -92,7 +92,7 @@ namespace bytes {
         widx = 0;
     }
 
-    bool Buffer::PeekAt(std::vector<char>& p, int index, int size)
+    bool Buffer::PeekAt(std::vector<char>& p, size_t index, size_t size)
     {
         if (index < 0 || index >= Len()) {
             return false;
@@ -100,8 +100,8 @@ namespace bytes {
         if (size <= 0) {
             return false;
         }
-        index   = ridx + index;
-        int len = widx - index;
+        index      = ridx + index;
+        size_t len = widx - index;
         if (size > len) {
             return false;
         }
@@ -118,7 +118,7 @@ namespace bytes {
             return;
         }
 
-        int len = Len();
+        size_t len = Len();
         std::copy(begin() + ridx, begin() + widx, begin());
         ridx = 0;
         widx = ridx + len;
@@ -128,22 +128,22 @@ namespace bytes {
     // ReadFrom
     // WriteTo
 
-    void Buffer::growSpace(int len)
+    void Buffer::growSpace(size_t len)
     {
         b.resize(widx + len);
     }
 
-    int Buffer::leftSpace()
+    size_t Buffer::leftSpace()
     {
         return b.size() - widx;
     }
 
-    void Buffer::hasWritten(int len)
+    void Buffer::hasWritten(size_t len)
     {
         widx += len;
         assert(widx <= b.size());
     }
-    void Buffer::hasReaded(int len)
+    void Buffer::hasReaded(size_t len)
     {
         ridx += len;
     }
@@ -185,40 +185,3 @@ namespace bytes {
     //  }
 }  // namespace bytes
 }  // namespace pp
-
-#if 0
-int main(int argc ,char *argv[])
-{
-	auto buffer = bytes::NewBuffer();
-	std::vector<char> data(10000, 1);
-
-	buffer->Write("12345");
-	buffer->Write("12345");
-	buffer->Write("12345");
-	buffer->Write("12345");
-	buffer->Write(data);
-
-	printf("cap:%d\n len:%d\n", buffer->Cap(), buffer->Len());
-	buffer->PeekAt(data, 3, 10);
-
-	printf("cap:%d\n len:%d\n", buffer->Cap(), buffer->Len());
-	buffer->ReadByte();
-	buffer->PeekAt(data, 3, 10);
-	buffer->ReadByte();
-	buffer->ReadByte();
-	buffer->ReadByte();
-	buffer->PeekAt(data, 3, 10);
-	buffer->Optimization();
-	buffer->PeekAt(data, 3, 10);
-	buffer->ReadBytes(data, 22);
-	buffer->UnReadByte();
-	buffer->UnReadByte();
-	buffer->UnReadByte();
-	buffer->UnReadByte();
-	buffer->UnReadBytes(22);
-	printf("cap:%d\n len:%d\n", buffer->Cap(), buffer->Len());
-
-    return 0;
-}
-
-#endif

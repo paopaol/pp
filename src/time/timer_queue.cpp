@@ -53,7 +53,7 @@ namespace _time {
 
     int timer_queue::size()
     {
-        return timer_queue_.size();
+        return static_cast<int>(timer_queue_.size());
     }
 
 }  // namespace _time

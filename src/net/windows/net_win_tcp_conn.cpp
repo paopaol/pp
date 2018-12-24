@@ -17,18 +17,19 @@ using namespace std;
 namespace pp {
 namespace net {
     tcp_conn::tcp_conn(io::event_loop* loop, int fd)
-        : loop_(loop),
-          socket_(AF_INET, SOCK_STREAM, fd),
-          event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd)),
-          state(Connecting),
-          remote_("", -1),
-          local_("", -1),
-          bytes_written_(0)
+        : loop_(loop)
+        , socket_(AF_INET, SOCK_STREAM, fd)
+        , event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd))
+        , state(Connecting)
+        , remote_("", -1)
+        , local_("", -1)
+        , bytes_written_(0)
+        , pending_read_(false)
     {
         event_fd_->data_recved(
-            [&](errors::error_code& error) { handle_read(error); });
+            [&](errors::error_code& error) { read_done(error); });
         event_fd_->set_write_handler(
-            [&](errors::error_code& error) { handle_write(error); });
+            [&](errors::error_code& error) { write_done(error); });
 
         event_fd_->closed(
             [&](errors::error_code& error) { handle_close(error); });
@@ -75,13 +76,15 @@ namespace net {
         }
     }
 
-    void tcp_conn::handle_read(errors::error_code& error)
+    void tcp_conn::read_done(errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
 
         io::iocp_event_fd::io_request_ref done_req =
             evfd->remove_active_request();
+
+        pending_read_ = false;
 
         read_buf_.Write(( const char* )done_req->buffer, done_req->io_size);
 
@@ -105,7 +108,7 @@ namespace net {
         }
     }
 
-    void tcp_conn::handle_write(errors::error_code& error)
+    void tcp_conn::write_done(errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
@@ -116,13 +119,15 @@ namespace net {
 
         active->sent_bytes += active->io_size;
         if (active->sent_bytes < active->total_bytes) {
-            evfd->queued_pending_request(active);
             // FIXME:need test
             const char* data = active->buffer + active->sent_bytes;
             int         len  = active->total_bytes - active->sent_bytes;
 
             start_write(data, len, error);
-            // FIXME:if error maybe handle_close
+            if (error.value() != 0) {
+                handle_close(error);
+            }
+            return;
         }
 
         bytes_written_ += active->sent_bytes;
@@ -153,7 +158,7 @@ namespace net {
         }
     }
 
-    void tcp_conn::write(const void* data, int len)
+    void tcp_conn::write(const void* data, size_t len)
     {
         if (state == Connected) {
             Slice slice(( const char* )data, ( const char* )data + len);
@@ -168,7 +173,7 @@ namespace net {
         }
     }
 
-    int tcp_conn::write(const void* data, int len, errors::error_code& error)
+    int tcp_conn::write(const void* data, size_t len, errors::error_code& error)
     {
         if (state != Connected) {
             return 0;
@@ -190,7 +195,7 @@ namespace net {
          */
 
         if (write_buf_.Len() > 0 && evfd->pending_request_size() == 0) {
-            write_buf_.Write(( char* )data, len);
+            write_buf_.Write(( char* )data, static_cast<int>(len));
             return 0;
         }
 
@@ -201,7 +206,7 @@ namespace net {
         // data is too long, only write some
         start_write(( const char* )data, MAX_WSA_BUFF_SIZE, error);
         write_buf_.Write(( char* )data + MAX_WSA_BUFF_SIZE,
-                         len - MAX_WSA_BUFF_SIZE);
+                         static_cast<int>(len - MAX_WSA_BUFF_SIZE));
         return 0;
     }
 
@@ -214,31 +219,38 @@ namespace net {
         DWORD flags     = 0;
         int   ecode     = 0;
 
+        // if call start_read multi times, only one
+        // realy post read
+        if (pending_read_) {
+            return;
+        }
+
         io::iocp_event_fd::io_request_ref request =
             evfd->create_io_request(io::event_fd::EV_READ);
         int ret = WSARecv(evfd->fd(), &request.get()->wasbuf, 1, &recvBytes,
                           &flags, &request.get()->Overlapped, NULL);
         if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
             error = hht_make_error_code(errors::error::NET_ERROR);
-            error.suffix_msg(errors::windows_errstr(ecode));
+            error.suffix_msg(errors::win_errstr(ecode));
             return;
         }
         evfd->queued_pending_request(request);
+        pending_read_ = true;
         return;
     }
 
     void tcp_conn::write_some_buffer_data(errors::error_code& error)
     {
         if (write_buf_.Len() > 0) {
-            int  min_write = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
-            char data[MAX_WSA_BUFF_SIZE] = { 0 };
+            size_t min_write = min(write_buf_.Len(), MAX_WSA_BUFF_SIZE);
+            char   data[MAX_WSA_BUFF_SIZE] = { 0 };
             write_buf_.Read(data, sizeof(data));
             write(data, min_write, error);
             return;
         }
     }
 
-    void tcp_conn::start_write(const void* data, int len,
+    void tcp_conn::start_write(const void* data, size_t len,
                                errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
@@ -250,20 +262,27 @@ namespace net {
         io::iocp_event_fd::io_request_ref request =
             evfd->create_io_request(io::iocp_event_fd::EV_WRITE);
         memcpy(request.get()->wasbuf.buf, data, len);
-        request.get()->wasbuf.len  = len;
-        request.get()->total_bytes = len;
+        request.get()->wasbuf.len  = static_cast<ULONG>(len);
+        request.get()->total_bytes = static_cast<ULONG>(len);
 
         int ret = WSASend(evfd->fd(), &request.get()->wasbuf, 1, &sentBytes, 0,
                           &request.get()->Overlapped, NULL);
         if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
             error = hht_make_error_code(errors::error::NET_ERROR);
-            error.suffix_msg(errors::windows_errstr(ecode));
+            error.suffix_msg(errors::win_errstr(ecode));
             return;
         }
 
         evfd->queued_pending_request(request);
     }
 
+    void tcp_conn::async_read()
+    {
+        loop_->run_in_loop([&]() {
+            errors::error_code err;
+            start_read(err);
+        });
+    }
     void tcp_conn::write(bytes::Buffer& buffer)
     {
         Slice slice;
@@ -344,11 +363,11 @@ namespace net {
         // at least, there was must one read request
         if (evfd->pending_request_size() == 0) {
             enable_read(error);
-            start_read(error);
-            if (error.value() != 0) {
-                handle_close(error);
-                return;
-            }
+            // start_read(error);
+            // if (error.value() != 0) {
+            //    handle_close(error);
+            //    return;
+            //}
         }
 
         if (connection_handler_) {

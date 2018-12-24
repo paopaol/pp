@@ -26,6 +26,15 @@ namespace io {
         event_loop_->update_event_fd(this, error);
     }
 
+
+    void iocp_event_fd::enable_connect(const connect_done_handler& done_handler,
+                                       errors::error_code&         error)
+    {
+        enabled_event_ |= iocp_event_fd::EV_CONNECT;
+        handle_connect_done_ = done_handler;
+        event_loop_->update_event_fd(this, error);
+    }
+
     int iocp_event_fd::handle_zero_done()
     {
         set_active(iocp_event_fd::EV_CLOSE);
@@ -57,6 +66,17 @@ namespace io {
         return 0;
     }
 
+
+    int iocp_event_fd::handle_connnect_done()
+    {
+        set_active(iocp_event_fd::EV_CONNECT);
+        errors::error_code error;
+        if (handle_connect_done_) {
+            handle_connect_done_(error);
+        }
+        return 0;
+    }
+
     int iocp_event_fd::handle_write_done()
     {
         errors::error_code error;
@@ -81,6 +101,9 @@ namespace io {
         }
         else if (active_pending_req_->IoOpt & iocp_event_fd::EV_WRITE) {
             handle_write_done();
+        }
+        else if (active_pending_req_->IoOpt & iocp_event_fd::EV_CONNECT) {
+            handle_connnect_done();
         }
         active_event_ = event_fd::EV_NONE;
     }
@@ -118,14 +141,15 @@ namespace io {
     void iocp_event_fd::set_active_pending(io_request_t* active)
     {
         auto find = io_request_list_.find(active);
-        assert(find != io_request_list_.end());
+        assert(find != io_request_list_.end()
+               && "not found pending io request, bug");
         active_pending_req_ = find->second;
         io_request_list_.erase(find);
     }
 
     int iocp_event_fd::pending_request_size()
     {
-        return io_request_list_.size();
+        return static_cast<int>(io_request_list_.size());
     }
 
     void iocp_event_fd::queued_pending_request(const io_request_ref& request)

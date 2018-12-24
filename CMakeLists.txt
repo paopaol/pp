@@ -1,6 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.3)
 
 project(pp)
+
+
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON "export symbols")
+
+set(PP_BUILD_INSTALL FALSE CACHE BOOL "install library or not")
+set(PP_DISABLED_TEST FALSE CACHE BOOL "build uint test or not")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(IS_WIN TRUE)
@@ -8,7 +14,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 # add_compile_options(-std=c++11)
-if(NOT DISABLED_TEST)
+if(NOT PP_DISABLED_TEST)
   enable_testing()
 endif()
 include_directories(include)
@@ -61,6 +67,7 @@ endif()
 ####net
 set(net-src-list
   src/net/tcp_server.cpp
+  src/net/tcp_client.cpp
   )
 if(IS_WIN)
   set(net-src-list
@@ -68,6 +75,7 @@ if(IS_WIN)
     src/net/windows/net_win_tcp_conn.cpp
     src/net/windows/net_win_iocp_tcp_accpeter.cpp
     src/net/windows/net_win_iocp_tcp_accpeter.h
+    src/net/windows/net_win_iocp_tcp_connector.cpp
     src/net/windows/net_win_socket.cpp
     )
 endif()
@@ -129,6 +137,45 @@ add_library(pp ${io-src-list}
   ${bytes-src-list}
   ${time-src-list}
   ${errors-src-list})
-target_link_libraries(pp ws2_32)
+target_link_libraries(pp PUBLIC ws2_32)
 
-add_subdirectory(test)
+if(NOT PP_DISABLED_TEST)
+    add_subdirectory(test)
+endif()
+
+
+if(PP_BUILD_INSTALL)
+    if(CMAKE_SIZEOF_VOID_P STREQUAL 4)
+        set(platform x86)
+    else()
+        set(platform x64)
+    endif()
+
+    install(TARGETS pp
+        CONFIGURATIONS RelWithDebInfo
+        RUNTIME DESTINATION bin/static.${platform}.RelWithDebInfo
+        ARCHIVE DESTINATION lib/static.${platform}.RelWithDebInfo
+        LIBRARY DESTINATION lib/static.${platform}.RelWithDebInfo
+        )
+    install(TARGETS pp
+        CONFIGURATIONS Release
+        RUNTIME DESTINATION bin/static.${platform}.Release
+        ARCHIVE DESTINATION lib/static.${platform}.Release
+        LIBRARY DESTINATION lib/static.${platform}.Release
+        )
+
+    install(TARGETS pp
+        CONFIGURATIONS Debug
+        RUNTIME DESTINATION bin/static.${platform}.Debug
+        ARCHIVE DESTINATION lib/static.${platform}.Debug
+        LIBRARY DESTINATION lib/static.${platform}.Debug
+        )
+    install(DIRECTORY include/
+        DESTINATION include
+        )
+endif()
+
+
+
+
+

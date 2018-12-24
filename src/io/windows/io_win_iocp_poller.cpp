@@ -50,10 +50,14 @@ namespace io {
         // if not found the event fd, we will create it
         auto it = events_map.find(event->fd());
         if (it == NOTFOUND_FROM(events_map)) {
-            iocp_associate_handle(( HANDLE )event->fd(), m_iocp, NULL, error);
-            if (error.value() == 0) {
-                events_map[event->fd()] = event;
-            }
+            iocp_associate_handle(reinterpret_cast<HANDLE>(event->fd()), m_iocp,
+                                  NULL, error);
+            // we ignore error of iocp_associate_handle,because if tcp_connector
+            // had associate the handle to iocp,after connected, the handle will
+            // used to create tcp_conn, and the tcp_conn will associate the
+            // handle too, if an handle already associated to iocp, it will
+            // return fail.
+            events_map[event->fd()] = event;
             error.clear();
         }
 
