@@ -12,7 +12,7 @@ pp is a c++ network frameworks.
   * [ ] udp_server
   * [ ] udp_client
   * [ ] http_server
-  * [ ] http_client
+  * [x] http_client (currently only GET )
   * [x] timer(timer heap)
   * [ ] timer(timer circle)
   * [x] better error reporter
@@ -31,7 +31,7 @@ pp is a c++ network frameworks.
 
 ### examples
   * [ ] http downloader
-  * [ ] http client
+  * [x] http client
   * [ ] tcp echo server
   * [ ] tcp echo client
   * [ ] socks5 server
