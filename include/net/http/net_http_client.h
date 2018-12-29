@@ -18,11 +18,9 @@ namespace pp {
 namespace net {
     enum class http_method { kGet, kPost };
     enum class http_version { kV1_1, kV1_0 };
-
     typedef std::map<std::string, std::string> http_header;
 
     class http_response;
-    typedef std::shared_ptr<http_response> http_response_ref;
     typedef std::function<void(const http_response*      resp,
                                const errors::error_code& error)>
         http_response_handler;
@@ -71,7 +69,7 @@ namespace net {
         ~http_client(){};
         http_request_ref new_request(const std::string& url, http_method method,
                                      const http_response_handler& resp_handler);
-        void             run(const http_request_ref& request);
+        void run(const http_request_ref& request, errors::error_code& error);
 
     private:
         typedef std::weak_ptr<http_conn_ctx> http_conn_ctx_wref;
@@ -114,48 +112,5 @@ namespace net {
     };
 }  // namespace net
 }  // namespace pp
-
-#if 0
-int main()
-{
-    io::event_loop loop;
-    http_client    client(&loop);
-
-    auto request = client.new_request(
-        "GET", "http://www.baidu.com",
-        [&, std::weak_ptr<http_request>(request)](
-            const net::http_response_ref& resp,
-            const errors::error_code&     error) {
-            if (error.value() != 0 || !conn->connected()) {
-                return;
-            }
-        },
-        [&](const net::http_response_ref& resp, const bytes::buffer& buffer,
-            const errors::error_code& error) {
-            std::vector<char> data;
-            buffer.read(data);
-        });
-    request->header.set("xxxxx", "xxxxxx");
-    client.do(request);
-
-
-    request = client.new_request(
-        "POST", "http://www.baidu.com",
-        [&](http_response* resp, const errors::error_code& error) {},
-        [&](http_response* resp, const bytes::buffer& buffer,
-            const errors::error_code& error) {
-
-        });
-
-    request.body    = io::reader([](char* buffer, int len) -> int {
-        std::copy(buffer, "key=value", len);
-        return 9;
-    });
-    request.readall = true;  // defult is true
-    client.do(request);
-    // if conn is closed, request destructed
-    loop.exec();
-}
-#endif
 
 #endif /* NET_HTTP_CLIENT_H */

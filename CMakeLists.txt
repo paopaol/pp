@@ -70,6 +70,8 @@ set(net-src-list
   src/net/tcp_server.cpp
   src/net/tcp_client.cpp
   src/net/http/http_client.cpp
+  src/net/http/http_conn_ctx.cpp
+  src/net/http/http_conn_ctx.h
   http-parser/http_parser.c
   http-parser/http_parser.h
   )
@@ -142,6 +144,9 @@ add_library(pp ${io-src-list}
   ${time-src-list}
   ${errors-src-list})
 target_link_libraries(pp PUBLIC ws2_32)
+if(WIN32)
+  target_compile_definitions(pp PRIVATE _SCL_SECURE_NO_WARNINGS _CRT_SECURE_NO_WARNINGS)
+endif()
 
 if(NOT PP_DISABLED_TEST)
     add_subdirectory(test)

@@ -40,7 +40,7 @@ namespace bytes {
         return n;
     }
 
-	size_t Buffer::ZeroCopyRead(char *&ptr, int n)
+	size_t Buffer::ZeroCopyRead(char *&ptr, size_t n)
 	{
         assert(n >= 0 && "buffer::read(), bad input paramer");
         n = n > Len() ? Len() : n;

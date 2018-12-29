@@ -36,7 +36,12 @@ int main(int argc, char* argv[])
                 }
             });
 
-        client.run(request);
+		errors::error_code err;
+        client.run(request, err);
+		if (err.value() != 0) {
+			std::cout << err.message() << std::endl;
+			return 1;
+		}
     }
     loop.exec();
 }
