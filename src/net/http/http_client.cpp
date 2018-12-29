@@ -17,7 +17,7 @@ namespace net {
         auto request           = std::make_shared<http_request>();
         request->method        = method;
         request->url           = url;
-        request->version       = http_version::kV1_1;
+        request->version       = { 1, 1 };
         request->resp_handler_ = resp_handler;
 
         return request;

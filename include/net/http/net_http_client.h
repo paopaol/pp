@@ -17,7 +17,10 @@ class io::event_loop;
 namespace pp {
 namespace net {
     enum class http_method { kGet, kPost };
-    enum class http_version { kV1_1, kV1_0 };
+    struct http_version {
+        int major;
+        int minor;
+    };
     typedef std::map<std::string, std::string> http_header;
 
     class http_response;

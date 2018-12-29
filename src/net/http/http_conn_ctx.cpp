@@ -1,4 +1,5 @@
 #include "http_conn_ctx.h"
+#include <fmt/fmt.h>
 
 namespace pp {
 namespace net {
@@ -38,6 +39,22 @@ namespace net {
     {
         auto ctx = static_cast<http_conn_ctx*>(_->data);
         assert(ctx);
+        switch (ctx->type_) {
+        case HTTP_RESPONSE: {
+            ctx->resp_.status_code   = _->status_code;
+            ctx->resp_.version.major = _->http_major;
+            ctx->resp_.version.minor = _->http_minor;
+            break;
+        }
+        case HTTP_REQUEST: {
+            ctx->request_->version.major = _->http_major;
+            ctx->request_->version.minor = _->http_minor;
+            break;
+        }
+        default:
+            break;
+        }
+
         ctx->parse_complete_ = true;
         return 0;
     }
@@ -113,9 +130,9 @@ namespace net {
 
     std::string http_conn_ctx::build_request_line()
     {
-        http_method method = request_->method;
-        std::string version =
-            request_->version == http_version::kV1_0 ? "HTTP/1.0" : "HTTP/1.1";
+        http_method method  = request_->method;
+        std::string version = fmt::Sprintf(
+            "HTTP/%d.%d", request_->version.major, request_->version.minor);
         int         off = parse_url_.field_data[UF_PATH].off;
         int         len = parse_url_.field_data[UF_PATH].len;
         std::string path(request_->url.c_str() + off, len);
