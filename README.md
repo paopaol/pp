@@ -14,7 +14,7 @@ pp is a c++ network frameworks.
   * [ ] http_server
   * [x] http_client (currently only GET )
   * [x] timer(timer heap)
-  * [ ] timer(timer circle)
+  * [ ] timer(timer wheel)
   * [x] better error reporter
   
 ### tcp/udp connection ###
