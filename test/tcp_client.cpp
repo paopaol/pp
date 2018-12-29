@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 {
     errors::error_code error;
     io::event_loop     loop;
-    net::tcp_client    client(&loop, "127.0.0.1", 9999);
+    net::tcp_client    client(&loop, net::addr("127.0.0.1", 9999));
 
 
     client.dial_done([&](const net::tcp_conn_ref&  conn,
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
         }
         errors::error_code err;
         auto               remote = conn->remote_addr(err);
-        std::cout << "connected to[" << remote.Ip << ":" << remote.Port << "]"
+        std::cout << "connected to[" << remote.ip << ":" << remote.port << "]"
                   << std::endl;
         conn->async_read();
     });

@@ -35,7 +35,7 @@ namespace net {
         enum ConnStatus { Connecting, Connected, DisConnecting, DisConnected };
 
         tcp_conn(io::event_loop* loop, int fd);
-        ~tcp_conn() {}
+		~tcp_conn() {}
         void connected(const connection_handler& handler);
         void closed(const close_handler& handler);
         void data_recved(const message_handler& handler);

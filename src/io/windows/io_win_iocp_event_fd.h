@@ -72,7 +72,8 @@ namespace io {
         io_request_ref                          active_pending_req_;
     };
 
-#define MAX_WSA_BUFF_SIZE (2 * (sizeof(SOCKADDR_STORAGE) + 16) + 5)
+//#define MAX_WSA_BUFF_SIZE (2 * (sizeof(SOCKADDR_STORAGE) + 16) + 8192)
+#define MAX_WSA_BUFF_SIZE (8192)
     struct io_request_t {
         io_request_t()
             : total_bytes(0)

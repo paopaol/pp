@@ -17,14 +17,14 @@ using namespace std;
 namespace pp {
 namespace net {
     tcp_conn::tcp_conn(io::event_loop* loop, int fd)
-        : loop_(loop)
-        , socket_(AF_INET, SOCK_STREAM, fd)
-        , event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd))
-        , state(Connecting)
-        , remote_("", -1)
-        , local_("", -1)
-        , bytes_written_(0)
-        , pending_read_(false)
+        : loop_(loop),
+          socket_(AF_INET, SOCK_STREAM, fd),
+          event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd)),
+          state(Connecting),
+          remote_("", -1),
+          local_("", -1),
+          bytes_written_(0),
+          pending_read_(false)
     {
         event_fd_->data_recved(
             [&](errors::error_code& error) { read_done(error); });
@@ -98,14 +98,13 @@ namespace net {
         //  return;
         //}
 
-        if (evfd->pending_request_size() > 0) {
-            return;
-        }
+        // if (evfd->pending_request_size() > 0) {
+        //     return;
+        // }
 
-        start_read(error);
-        if (error.value() != 0) {
-            handle_close(error);
-        }
+        // if (error.value() != 0) {
+        //     handle_close(error);
+        // }
     }
 
     void tcp_conn::write_done(errors::error_code& error)
@@ -307,7 +306,7 @@ namespace net {
 
     addr tcp_conn::remote_addr(errors::error_code& error)
     {
-        if (!remote_.Ip.empty()) {
+        if (!remote_.ip.empty()) {
             return remote_;
         }
 
@@ -317,7 +316,7 @@ namespace net {
 
     addr tcp_conn::local_addr(errors::error_code& error)
     {
-        if (!local_.Ip.empty()) {
+        if (!local_.ip.empty()) {
             return local_;
         }
         local_ = socket_.local_addr(error);

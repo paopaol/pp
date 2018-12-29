@@ -64,10 +64,14 @@ if(IS_WIN)
     )
 endif()
 
+include_directories(http-parser)
 ####net
 set(net-src-list
   src/net/tcp_server.cpp
   src/net/tcp_client.cpp
+  src/net/http/http_client.cpp
+  http-parser/http_parser.c
+  http-parser/http_parser.h
   )
 if(IS_WIN)
   set(net-src-list
@@ -174,8 +178,3 @@ if(PP_BUILD_INSTALL)
         DESTINATION include
         )
 endif()
-
-
-
-
-

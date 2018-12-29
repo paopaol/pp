@@ -3,7 +3,7 @@
 namespace pp {
 namespace bytes {
 
-    Buffer::Buffer() : b(4096), ridx(0), widx(0) {}
+    Buffer::Buffer() : b(8192), ridx(0), widx(0) {}
 
     // Read All
     size_t Buffer::Read(std::vector<char>& p)
@@ -39,6 +39,15 @@ namespace bytes {
         hasReaded(n);
         return n;
     }
+
+	size_t Buffer::ZeroCopyRead(char *&ptr, int n)
+	{
+        assert(n >= 0 && "buffer::read(), bad input paramer");
+        n = n > Len() ? Len() : n;
+		ptr = lastRead();
+        hasReaded(n);
+        return n;
+	}
 
     // write data into buffer
     size_t Buffer::Write(const char* d, size_t len)

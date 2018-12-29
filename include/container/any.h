@@ -1,3 +1,6 @@
+#ifndef CONTAINOR_ANY_H
+#define CONTAINOR_ANY_H
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -88,4 +91,6 @@ private:
     std::type_index m_tpIndex;
 };
 
+
 }  // namespace pp
+#endif

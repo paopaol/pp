@@ -12,19 +12,19 @@
 namespace pp {
 namespace net {
     struct addr {
-        addr(const std::string& ip, int port) : Ip(ip), Port(port) {}
+        addr(const std::string& ip_, int port_) : ip(ip_), port(port_) {}
         addr() {}
 
         std::string string()
         {
             std::stringstream s;
 
-            s << Ip << ":" << Port;
+            s << ip << ":" << port;
             return s.str();
         }
 
-        std::string Ip;
-        int         Port;
+        std::string ip;
+        int         port;
     };
 
     class socket {

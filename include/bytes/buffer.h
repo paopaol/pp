@@ -27,6 +27,7 @@ namespace bytes {
         size_t ReadBytes(std::vector<char>& p, size_t n);
 
         size_t Read(char* buffer, size_t n);
+		size_t ZeroCopyRead(char *&ptr, int n);
 
         // write data into buffer
         size_t Write(const char* d, size_t len);

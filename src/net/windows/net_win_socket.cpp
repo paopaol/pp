@@ -44,7 +44,7 @@ namespace net {
     }
     int socket::create(int af, int type, errors::error_code& error)
     {
-        int fd = ::WSASocket(af, type, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+        int fd = static_cast<int>(::WSASocket(af, type, 0, NULL, 0, WSA_FLAG_OVERLAPPED));
         if (fd == INVALID_SOCKET) {
             error = hht_make_error_code(
                 static_cast<errors::error>(errors::error::NET_ERROR));
@@ -136,8 +136,8 @@ namespace net {
     {
         struct sockaddr_in saddr;
         saddr.sin_family = af_;
-        saddr.sin_port   = htons(addr.Port);
-        if (::inet_pton(af_, addr.Ip.c_str(), &saddr.sin_addr) <= 0) {
+        saddr.sin_port   = htons(addr.port);
+        if (::inet_pton(af_, addr.ip.c_str(), &saddr.sin_addr) <= 0) {
             error = hht_make_error_code(
                 static_cast<errors::error>(errors::error::NET_ERROR));
             error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
@@ -172,8 +172,8 @@ namespace net {
         struct sockaddr_in sa[2];
         int                len = sizeof(sa);
         if (getpeername(fd_, ( struct sockaddr* )&sa, &len) == 0) {
-            addr.Ip   = inet_ntoa(sa[0].sin_addr);
-            addr.Port = ntohs(sa[0].sin_port);
+            addr.ip   = inet_ntoa(sa[0].sin_addr);
+            addr.port = ntohs(sa[0].sin_port);
         }
         else {
             int e = ::WSAGetLastError();
@@ -190,8 +190,8 @@ namespace net {
         struct sockaddr_in sa[2];
         int                len = sizeof(sa);
         if (getsockname(fd_, ( struct sockaddr* )&sa, &len) == 0) {
-            addr.Ip   = inet_ntoa(sa[0].sin_addr);
-            addr.Port = ntohs(sa[0].sin_port);
+            addr.ip   = inet_ntoa(sa[0].sin_addr);
+            addr.port = ntohs(sa[0].sin_port);
         }
         else {
             error = hht_make_error_code(

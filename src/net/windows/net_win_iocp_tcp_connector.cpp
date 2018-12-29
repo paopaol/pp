@@ -2,9 +2,9 @@
 #include <net/net_tcp_connector.h>
 #include <windows/io_win_iocp_event_fd.h>
 
+#include <errors/pp_error.h>
 #include <io/io_event_fd.h>
 #include <io/io_event_loop.h>
-#include <errors/pp_error.h>
 #include <windows/errors_windows.h>
 #include <windows/net_win.h>
 
@@ -12,8 +12,6 @@
 #include <Windows.h>
 
 using namespace std;
-
-
 
 namespace pp {
 namespace net {
@@ -43,28 +41,23 @@ namespace net {
         system::once_flag flag;
     };
 
-
-    tcp_connector::tcp_connector(io::event_loop* loop, const std::string& host,
-                                 int port)
-        : loop_(loop)
-        , socket_(AF_INET, SOCK_STREAM, newsocket(AF_INET, SOCK_STREAM, error_))
-        , conn_fd_(std::make_shared<io::iocp_event_fd>(loop, socket_.fd()))
-        , host_(host)
-        , port_(port)
+    tcp_connector::tcp_connector(io::event_loop* loop, const addr& addr)
+        : loop_(loop),
+          socket_(AF_INET, SOCK_STREAM,
+                  newsocket(AF_INET, SOCK_STREAM, error_)),
+          conn_fd_(std::make_shared<io::iocp_event_fd>(loop, socket_.fd())),
+          addr_(addr)
 
     {
         socket_.set_nonblock(error_);
     }
 
-
     tcp_connector::~tcp_connector() {}
-
 
     void tcp_connector::set_new_conn_handler(const new_conn_handler& handler)
     {
         new_conn_handler_ = handler;
     }
-
 
     int tcp_connector::start_connect(errors::error_code& error)
     {
@@ -79,7 +72,7 @@ namespace net {
         static windows_connect_ex_initer ex_func_init(evfd->fd());
 
         net::ip4_addr("0.0.0.0", 0, &local);
-        net::ip4_addr(host_.c_str(), port_, &addr);
+        net::ip4_addr(addr_.ip.c_str(), addr_.port, &addr);
 
         ecode = ::bind(evfd->fd(), ( const sockaddr* )&local, sizeof local);
         if (ecode != 0) {
@@ -92,7 +85,6 @@ namespace net {
         evfd->enable_connect(std::bind(&tcp_connector::connect_done, this),
                              error);
 
-
         auto request = evfd->create_io_request(io::iocp_event_fd::EV_CONNECT);
         int  ret =
             connect_ex(evfd->fd(), ( const sockaddr* )&addr, sizeof(addr), NULL,
@@ -104,7 +96,6 @@ namespace net {
             }
             return -1;
         }
-
 
         evfd->queued_pending_request(request);
         return 0;
@@ -127,7 +118,7 @@ namespace net {
         // if not upadte fd of SO_UPDATE_CONNECT_CONTEXT,
         // then after getpeername will return 10057
         int ret = ::setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,
-                               ( char* )&active->io_fd, sizeof(active->io_fd));
+                               nullptr, 0);
         if (ret < 0) {
             make_win_socket_error_code(error, fd);
             fd = -1;
