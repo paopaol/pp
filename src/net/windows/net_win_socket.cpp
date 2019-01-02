@@ -8,10 +8,10 @@
 #include <strsafe.h>
 #include <winsock2.h>
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <errors/hht_error.h>
 #include <errors/pp_error.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <windows/errors_windows.h>
 
 //#include <filesystem>
@@ -36,6 +36,19 @@ namespace net {
 
     static WsasocketIniter wsa_socket_initer;
 
+    static int set_noblock(int fd, errors::error_code& error)
+    {
+        unsigned long set = 1;
+        int           ret = ::ioctlsocket(fd, FIONBIO, &set);
+        if (ret != 0) {
+            error = hht_make_error_code(
+                static_cast<errors::error>(errors::error::NET_ERROR));
+            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
+            return -1;
+        }
+        return 0;
+    }
+
     socket::socket(int af, int type, int fd) : fd_(fd), af_(af), type_(type) {}
 
     socket::~socket()
@@ -44,7 +57,8 @@ namespace net {
     }
     int socket::create(int af, int type, errors::error_code& error)
     {
-        int fd = static_cast<int>(::WSASocket(af, type, 0, NULL, 0, WSA_FLAG_OVERLAPPED));
+        int fd = static_cast<int>(
+            ::WSASocket(af, type, 0, NULL, 0, WSA_FLAG_OVERLAPPED));
         if (fd == INVALID_SOCKET) {
             error = hht_make_error_code(
                 static_cast<errors::error>(errors::error::NET_ERROR));
@@ -121,15 +135,7 @@ namespace net {
 
     int socket::set_nonblock(errors::error_code& error)
     {
-        unsigned long set = 1;
-        int           ret = ::ioctlsocket(fd_, FIONBIO, &set);
-        if (ret != 0) {
-            error = hht_make_error_code(
-                static_cast<errors::error>(errors::error::NET_ERROR));
-            error.suffix_msg(errors::win_errstr(::WSAGetLastError()));
-            return -1;
-        }
-        return 0;
+        return set_noblock(fd_, error);
     }
 
     int socket::bind(const addr& addr, errors::error_code& error)
@@ -201,9 +207,10 @@ namespace net {
         return addr;
     }
 
-    int newsocket(int af, int type, errors::error_code& error)
+    int new_nonblock_socket(int af, int type, errors::error_code& error)
     {
         int fd = socket::create(af, type, error);
+        set_noblock(fd, error);
 
         return fd;
     }

@@ -25,7 +25,7 @@ namespace net {
         void message_recved(const message_handler& handler);
         void data_write_finished(const write_finished_handler& handler);
 
-        void dial();
+        void dial(_time::Duration timeout = 0);
         void write(char* data, int len);
         void close();
         void set_user_data(const pp::Any& any);

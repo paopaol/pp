@@ -126,7 +126,7 @@ namespace net {
 
         client->set_user_data(http_conn_ctx_wref(ctx));
 
-        client->dial();
+        client->dial(_time::Second * 4);
         add_client(client, ctx);
     }
 

@@ -26,7 +26,6 @@ namespace io {
         event_loop_->update_event_fd(this, error);
     }
 
-
     void iocp_event_fd::enable_connect(const connect_done_handler& done_handler,
                                        errors::error_code&         error)
     {
@@ -65,7 +64,6 @@ namespace io {
         }
         return 0;
     }
-
 
     int iocp_event_fd::handle_connnect_done()
     {

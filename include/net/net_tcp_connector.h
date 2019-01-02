@@ -6,6 +6,7 @@
 #include <io/io_event_fd.h>
 #include <net/net.h>
 #include <net/net_socket_accpeter.h>
+#include <net/net_tcp_conn.h>
 
 namespace pp {
 namespace io {
@@ -15,7 +16,7 @@ namespace io {
 
 namespace pp {
 namespace net {
-    class tcp_connector {
+    class tcp_connector : public std::enable_shared_from_this<tcp_connector> {
     public:
         //! Default constructor
         tcp_connector(io::event_loop* loop, const addr& addr);
@@ -24,8 +25,17 @@ namespace net {
         virtual ~tcp_connector() noexcept;
 
         void set_new_conn_handler(const new_conn_handler& handler);
-        int  start_connect(errors::error_code& error);
+        int  start_connect(_time::Duration timeout, errors::error_code& error);
+        int  cancel_connect();
         void connect_done();
+        // detach the tcp_connector's event fd from loop,
+        // if connector connect failed,
+        // we can't detach the evfd.
+        // but if connect success, we must detach it,becouse
+        // after connect ok,we will use the socket create one tcp_conn,
+        // when tcp_conn connect_established,it attach the tcp_conn's
+        // event fd to the loop
+        void detach_loop();
 
     private:
         //! Copy constructor
@@ -41,12 +51,12 @@ namespace net {
         tcp_connector& operator=(tcp_connector&& other) noexcept;
 
         io::event_loop*    loop_;
-        net::socket        socket_;
         io::event_fd_ref   conn_fd_;
         new_conn_handler   new_conn_handler_;
         errors::error_code error_;
         int                type;
         addr               addr_;
+        _time::timer_ref   timer_;
     };
     typedef std::shared_ptr<tcp_connector> tcp_connector_ref;
 }  // namespace net

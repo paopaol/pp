@@ -12,15 +12,13 @@ namespace net {
 
     tcp_server::tcp_server(io::event_loop* loop, const net::addr& addr,
                            const std::string& name)
-        : loop_(loop)
-        ,
+        : loop_(loop),
 #ifdef WIN32
-        accpeter_(reinterpret_cast<tcp_server_accpeter*>(
-            new win_iocp_tcp_accpeter(loop_)))
-        ,
+          accpeter_(reinterpret_cast<tcp_server_accpeter*>(
+              new win_iocp_tcp_accpeter(loop_))),
 #endif
-        bind_addr_(addr)
-        , server_name_(name)
+          bind_addr_(addr),
+          server_name_(name)
     {
         win_iocp_tcp_accpeter* accpeter =
             reinterpret_cast<win_iocp_tcp_accpeter*>(accpeter_);
@@ -55,7 +53,8 @@ namespace net {
 
     void tcp_server::on_new_conn(int fd, const errors::error_code& error)
     {
-        net::tcp_conn_ref conn = std::make_shared<net::tcp_conn>(loop_, fd);
+        net::tcp_conn_ref conn =
+            std::make_shared<net::tcp_conn>(loop_, fd, error);
 
         conn->connected(handle_new_conn_);
         conn->data_recved(handle_recved_data);
@@ -67,9 +66,9 @@ namespace net {
             handle_new_conn_(conn, _time::time(), error);
             return;
         }
-		errors::error_code err;
+        errors::error_code err;
         conn_list_[conn->remote_addr(err).string()] = conn;
-        conn->connect_established();
+        conn->connect_established(error);
     }
 
     void tcp_server::remove_from_conn_list(const net::tcp_conn_ref&  conn,

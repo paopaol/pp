@@ -76,12 +76,12 @@ namespace io {
 #define MAX_WSA_BUFF_SIZE (8192)
     struct io_request_t {
         io_request_t()
-            : total_bytes(0)
-            , sent_bytes(0)
-            , IoOpt(iocp_event_fd::EV_NONE)
-            , accpet_fd(-1)
-            , io_fd(-1)
-            , io_size(0)
+            : total_bytes(0),
+              sent_bytes(0),
+              IoOpt(iocp_event_fd::EV_NONE),
+              accpet_fd(-1),
+              io_fd(-1),
+              io_size(0)
         {
             ZeroMemory(&Overlapped, sizeof(Overlapped));
             wasbuf.buf = buffer;

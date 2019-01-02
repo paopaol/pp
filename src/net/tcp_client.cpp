@@ -32,11 +32,11 @@ namespace net {
         handle_write_finished_ = handler;
     }
 
-    void tcp_client::dial()
+    void tcp_client::dial(_time::Duration timeout)
     {
         loop_->run_in_loop([&]() {
             errors::error_code error;
-            tcp_connector_->start_connect(error);
+            tcp_connector_->start_connect(timeout, error);
         });
     }
 
@@ -50,27 +50,23 @@ namespace net {
         tcp_conn_->shutdown();
     }
 
-	void tcp_client::set_user_data(const pp::Any& any)
-	{
-		any_ = any;
-	}
+    void tcp_client::set_user_data(const pp::Any& any)
+    {
+        any_ = any;
+    }
 
     void tcp_client::conn_connected(int fd, const errors::error_code& error)
     {
-        tcp_conn_ = std::make_shared<tcp_conn>(loop_, fd);
+        tcp_connector_->detach_loop();
+        tcp_conn_ = std::make_shared<tcp_conn>(loop_, fd, error);
 
         tcp_conn_->connected(handle_connection_);
         tcp_conn_->closed(std::bind(&tcp_client::conn_closed, this, _1, _2));
         tcp_conn_->data_recved(handle_recv_data_);
         tcp_conn_->data_write_finished(handle_write_finished_);
-		tcp_conn_->set_user_data(any_);
+        tcp_conn_->set_user_data(any_);
 
-        // connect failed
-        if (error.value() != 0 && handle_connection_) {
-            handle_connection_(tcp_conn_, _time::time(), error);
-            return;
-        }
-        tcp_conn_->connect_established();
+        tcp_conn_->connect_established(error);
     }
 
     void tcp_client::conn_closed(const net::tcp_conn_ref&  conn,

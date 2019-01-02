@@ -16,7 +16,8 @@ using namespace std;
 
 namespace pp {
 namespace net {
-    tcp_conn::tcp_conn(io::event_loop* loop, int fd)
+    tcp_conn::tcp_conn(io::event_loop* loop, int fd,
+                       const errors::error_code& error)
         : loop_(loop),
           socket_(AF_INET, SOCK_STREAM, fd),
           event_fd_(std::make_shared<io::iocp_event_fd>(loop_, fd)),
@@ -34,8 +35,8 @@ namespace net {
         event_fd_->closed(
             [&](errors::error_code& error) { handle_close(error); });
 
-        errors::error_code error;
-        socket_.set_nonblock(error);
+        errors::error_code err;
+        socket_.set_nonblock(err);
     }
 
     void tcp_conn::connected(const connection_handler& handler)
@@ -346,7 +347,7 @@ namespace net {
         socket::shutdown_write(evfd->fd());
     }
 
-    void tcp_conn::connect_established()
+    void tcp_conn::connect_established(const errors::error_code &error)
     {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
@@ -356,12 +357,12 @@ namespace net {
         state = Connected;
 
         event_fd_->tie(shared_from_this());
-        errors::error_code error;
+        errors::error_code err;
 
         // first, if no pending io request, we push one read request
         // at least, there was must one read request
         if (evfd->pending_request_size() == 0) {
-            enable_read(error);
+            enable_read(err);
             // start_read(error);
             // if (error.value() != 0) {
             //    handle_close(error);
@@ -371,7 +372,7 @@ namespace net {
 
         if (connection_handler_) {
             connection_handler_(shared_from_this(), _time::time(),
-                                errors::error_code());
+                                error);
         }
     }
 
@@ -381,7 +382,7 @@ namespace net {
             static_cast<io::iocp_event_fd*>(event_fd_.get());
 
         assert(loop_->in_created_thread());
-
+        assert(state == DisConnected);
         if (state == DisConnected) {
             if (connection_handler_) {
                 connection_handler_(shared_from_this(), _time::now(), error);

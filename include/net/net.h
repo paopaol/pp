@@ -47,7 +47,8 @@ namespace net {
 
         static int shutdown_write(int fd);
 
-        friend int newsocket(int af, int type, errors::error_code& error);
+        friend int new_nonblock_socket(int af, int type,
+                                       errors::error_code& error);
 
     private:
         static int create(int af, int type, errors::error_code& error);

@@ -1,9 +1,9 @@
 #include "windows/net_win_iocp_tcp_accpeter.h"
 #include <windows/net_win.h>
 
+#include <errors/pp_error.h>
 #include <io/io_event_fd.h>
 #include <io/io_event_loop.h>
-#include <errors/pp_error.h>
 #include <windows/errors_windows.h>
 
 #include <WinSock2.h>
@@ -37,9 +37,10 @@ namespace net {
     };
 
     win_iocp_tcp_accpeter::win_iocp_tcp_accpeter(io::event_loop* loop)
-        : loop_(loop)
-        , socket_(AF_INET, SOCK_STREAM, newsocket(AF_INET, SOCK_STREAM, error_))
-        , listen_fd_(std::make_shared<io::iocp_event_fd>(loop, socket_.fd()))
+        : loop_(loop),
+          socket_(AF_INET, SOCK_STREAM,
+                  new_nonblock_socket(AF_INET, SOCK_STREAM, error_)),
+          listen_fd_(std::make_shared<io::iocp_event_fd>(loop, socket_.fd()))
     {
         assert(error_.value() == 0);
         socket_.set_reuse_addr(true, error_);
@@ -54,7 +55,7 @@ namespace net {
 
     void
     win_iocp_tcp_accpeter::handle_accpet_done(int                       fd,
-                                               const errors::error_code& error)
+                                              const errors::error_code& error)
     {
         if (new_conn_handler_) {
             new_conn_handler_(fd, error);
@@ -86,7 +87,8 @@ namespace net {
         auto evfd = static_cast<io::iocp_event_fd*>(listen_fd_.get());
         static windows_ex_func_initer ex_func_init(evfd->fd());
 
-        int accept_socket = net::newsocket(AF_INET, SOCK_STREAM, error);
+        int accept_socket =
+            net::new_nonblock_socket(AF_INET, SOCK_STREAM, error);
         hht_return_if_error(error, -1);
 
         auto request = evfd->create_io_request(io::iocp_event_fd::EV_ACCPET);
@@ -96,7 +98,7 @@ namespace net {
                         &recv_bytes, (LPOVERLAPPED) & (request->Overlapped));
 
         if (!SUCCEEDED_WITH_IOCP(ret, ecode)) {
-			make_win_socket_error_code(error, accept_socket);
+            make_win_socket_error_code(error, accept_socket);
             handle_accpet_done(-1, error);
             return -1;
         }
@@ -119,11 +121,10 @@ namespace net {
         int ret = ::setsockopt(client_fd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
                                ( char* )&active->io_fd, sizeof(active->io_fd));
         if (ret < 0) {
-			make_win_socket_error_code(error, client_fd);
+            make_win_socket_error_code(error, client_fd);
             handle_accpet_done(-1, error);
             return;
         }
-
 
         evfd->enable_accpet(
             std::bind(&win_iocp_tcp_accpeter::accpet_done, this), error);

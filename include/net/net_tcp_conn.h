@@ -1,3 +1,4 @@
+
 #ifndef NET_CONN_H
 #define NET_CONN_H
 
@@ -34,8 +35,8 @@ namespace net {
     public:
         enum ConnStatus { Connecting, Connected, DisConnecting, DisConnected };
 
-        tcp_conn(io::event_loop* loop, int fd);
-		~tcp_conn() {}
+        tcp_conn(io::event_loop* loop, int fd, const errors::error_code& error);
+        ~tcp_conn() {}
         void connected(const connection_handler& handler);
         void closed(const close_handler& handler);
         void data_recved(const message_handler& handler);
@@ -47,7 +48,7 @@ namespace net {
 
         int  close();
         void shutdown();
-        void connect_established();
+        void connect_established(const errors::error_code& error);
         void connect_destroyed(const errors::error_code& error);
         bool connected()
         {
