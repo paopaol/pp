@@ -36,9 +36,9 @@ namespace io {
         read_func read_;
     };
 
-    struct writer {
+    class writer {
     public:
-        explicit writer(const write_func& func) : write_(func){};
+        writer(const write_func& func) : write_(func){};
         writer(){};
         ~writer(){};
 
@@ -57,6 +57,7 @@ namespace io {
     private:
         write_func write_;
     };
+
 }  // namespace io
 }  // namespace pp
 

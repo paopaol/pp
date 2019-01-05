@@ -14,11 +14,12 @@ namespace net {
     http_client::new_request(const std::string& url, http_method method,
                              const http_response_handler& resp_handler)
     {
-        auto request           = std::make_shared<http_request>();
-        request->method        = method;
-        request->url           = url;
-        request->version       = { 1, 1 };
-        request->resp_handler_ = resp_handler;
+        auto request             = std::make_shared<http_request>();
+        request->method          = method;
+        request->url             = url;
+        request->version         = { 1, 1 };
+        request->resp_handler_   = resp_handler;
+        request->handler_called_ = false;
 
         return request;
     }
@@ -91,7 +92,7 @@ namespace net {
         auto request = resp->request.lock();
 
         if (request && request->resp_handler_) {
-            request->resp_handler_(resp, error);
+            request->resp_handler_(( http_response* )resp, error);
         }
     }
 
@@ -111,9 +112,9 @@ namespace net {
             return;
         }
 
-        int         off  = ctx->parse_url_.field_data[UF_HOST].off;
-        int         len  = ctx->parse_url_.field_data[UF_HOST].len;
-        int         port = ctx->parse_url_.port;
+        int off  = ctx->parse_url_.field_data[UF_HOST].off;
+        int len  = ctx->parse_url_.field_data[UF_HOST].len;
+        int port = ctx->parse_url_.port == 0 ? 80 : ctx->parse_url_.port;
         std::string host = std::string(ctx->request_->url.c_str() + off, len);
 
         auto client = std::make_shared<tcp_client>(loop_, addr(host, port));
@@ -126,7 +127,7 @@ namespace net {
 
         client->set_user_data(http_conn_ctx_wref(ctx));
 
-        client->dial(_time::Second * 4);
+        client->dial(0);
         add_client(client, ctx);
     }
 
@@ -138,15 +139,16 @@ namespace net {
         assert(ctx);
 
         auto request = ctx->request_;
-        auto resp    = ctx->resp_;
 
+        // conn closed
         if (!conn->connected() || error.value() != 0) {
             auto err = ctx->error_.value() == 0 ? error : ctx->error_;
+            // if some error occured,notify the user
             handle_resp(&ctx->resp_, err);
-            // conn closed
             remove_client(ctx);
             return;
         }
+        ctx->resp_.done_ = false;
         write_request_line(conn, ctx);
     }
 
@@ -155,10 +157,30 @@ namespace net {
     {
         auto ctx = __user_data(conn, http_conn_ctx_wref).lock();
         assert(ctx);
+        auto req = ctx->request_;
+
+        // befor parsing,we must post a read,
+        // if not do this, when conn closed, we can't kown
+        conn->async_read();
+        // when parsing, error occured
+        if (ctx->error_.value() != 0) {
+            ctx->resp_.done_ = true;
+            conn->shutdown();
+            return;
+        }
 
         ctx->parsing_http_msg(buffer);
-        conn->async_read();
+        if (ctx->parse_header_complete_ && !req->handler_called_) {
+            handle_resp(&ctx->resp_, errors::error_code());
+            req->handler_called_ = true;
+        }
+        if (ctx->resp_.body.is_nil() && req->handler_called_) {
+            ctx->resp_.done_ = true;
+            conn->shutdown();
+            return;
+        }
         if (ctx->parse_complete_) {
+            ctx->resp_.done_ = true;
             conn->shutdown();
         }
     }

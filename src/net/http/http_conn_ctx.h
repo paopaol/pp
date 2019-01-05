@@ -1,15 +1,15 @@
 #ifndef HTTP_CONN_CTX_H
 #define HTTP_CONN_CTX_H
 
-
-#include <net/http/net_http_client.h>
 #include <http_parser.h>
+#include <net/http/net_http_client.h>
 
 namespace pp {
 namespace net {
     class http_conn_ctx {
-	public:
+    public:
         http_conn_ctx(const http_request_ref& request, http_parser_type type);
+
     private:
         std::string build_request_line();
         std::string build_request_header();
@@ -31,14 +31,19 @@ namespace net {
         friend static int on_status(http_parser* _, const char* at,
                                     size_t length);
 
-        std::string                  next_header_;
-        std::string                  next_val_;
+        std::string next_header_;
+        std::string next_val_;
+        // when parsing header done, parer maybe also read some body data,
+        // we store this int some_body_,if user then set resp->body writer
+        // cal resp_.body.write(some_body);
+        std::string                  some_body_;
         http_request_ref             request_;
         http_response                resp_;
         std::shared_ptr<http_parser> parser_;
         http_parser_type             type_;
         errors::error_code           error_;
         bool                         parse_complete_;
+        bool                         parse_header_complete_;
         http_parser_url              parse_url_;
     };
 }  // namespace net

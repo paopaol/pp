@@ -24,7 +24,7 @@ namespace net {
     typedef std::map<std::string, std::string> http_header;
 
     class http_response;
-    typedef std::function<void(const http_response*      resp,
+    typedef std::function<void(http_response*            resp,
                                const errors::error_code& error)>
         http_response_handler;
 
@@ -45,6 +45,7 @@ namespace net {
 
     private:
         http_response_handler resp_handler_;
+        bool                  handler_called_;
     };
 
     typedef std::shared_ptr<http_request> http_request_ref;
@@ -55,14 +56,22 @@ namespace net {
 
     class http_response {
     public:
-        int          status_code;
-        std::string  status_line;
-        http_header  headers;
-        http_version version;
-        // when body is nil,we use content
-        std::string                 content;
+        bool is_done()
+        {
+            return done_;
+        }
+
+        int                         status_code;
+        std::string                 status_line;
+        http_header                 headers;
+        http_version                version;
         io::writer                  body;
         std::weak_ptr<http_request> request;
+
+    private:
+        friend class http_client;
+
+        bool done_;
     };
 
     class http_client {

@@ -9,31 +9,42 @@ static int              complete_numbers   = 0;
 static int              concurrent_numbers = 0;
 static _time::timer_ref abort_timer;
 
-static void handle_resp(const net::http_response* resp,
+static size_t read_body(const char* data, size_t len)
+{
+    fwrite(data, 1, len, stdout);
+    return len;
+}
+
+// this function will called multi times;
+// 1, on header recved
+// 2, on errror
+// 3, on  resp done
+static void handle_resp(net::http_response*       resp,
                         const errors::error_code& error, io::event_loop* loop)
 {
-    //abort_timer->cancel();
-    //abort_timer = nullptr;
+    std::shared_ptr<void> __(nullptr, std::bind([&]() {
+                                 ++complete_numbers;
+                                 if (complete_numbers == concurrent_numbers) {
+                                     loop->quit();
+                                 }
+                             }));
 
-    ++complete_numbers;
     if (error.value() != 0) {
-		std::cout << error.message(); //<< std::endl;
+        std::cout << error.message();  //<< std::endl;
+        return;
     }
-    else {
-        //std::cout << "status code:" << resp->status_code << std::endl;
-        //printf("version:(%d,%d)\n", resp->version.major, resp->version.minor);
-        //std::cout << "status:" << resp->status_line << std::endl;
-        //std::cout << "headers:" << std::endl;
-        //for (auto header : resp->headers) {
-        //    std::cout << header.first << " : " << header.second << std::endl;
-        //}
-        //std::cout << "body:" << std::endl;
-        //std::cout << resp->content << std::endl;
-		printf("%d\n", complete_numbers);
+    if (resp->is_done()) {
+        return;
     }
-    if (complete_numbers == concurrent_numbers) {
-        loop->quit();
+    std::cout << "status code:" << resp->status_code << std::endl;
+    printf("version:(%d,%d)\n", resp->version.major, resp->version.minor);
+    std::cout << "status:" << resp->status_line << std::endl;
+    std::cout << "headers:" << std::endl;
+    for (auto header : resp->headers) {
+        std::cout << header.first << " : " << header.second << std::endl;
     }
+    // if set body writer,the body will be readed
+    // resp->body = io::writer(read_body);
 }
 
 int main(int argc, char* argv[])
@@ -54,9 +65,6 @@ int main(int argc, char* argv[])
             std::cout << err.message() << std::endl;
             return 1;
         }
-        //abort_timer =
-        //    _time::new_timer(_time::timer::timer_behavior::oneshot,
-        //                     _time::Second * 5, [&]() { printf("timeout\n"); });
     }
     loop.exec();
 }

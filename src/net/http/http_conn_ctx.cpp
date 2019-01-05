@@ -9,7 +9,9 @@ namespace net {
         : request_(request),
           parser_(std::make_shared<http_parser>()),
           type_(type),
-          parse_complete_(false)
+          parse_complete_(false),
+          parse_header_complete_(false)
+
     {
         http_parser_init(parser_.get(), type);
         parser_->data = static_cast<void*>(this);
@@ -32,6 +34,9 @@ namespace net {
 
     static int on_headers_complete(http_parser* p)
     {
+        auto ctx = static_cast<http_conn_ctx*>(p->data);
+        assert(ctx);
+        ctx->parse_header_complete_ = true;
         return 0;
     }
 
@@ -106,9 +111,14 @@ namespace net {
         switch (ctx->type_) {
         case HTTP_RESPONSE: {
             if (ctx->resp_.body.is_nil()) {
-                ctx->resp_.content.append(at, length);
+                ctx->some_body_.append(at, length);
             }
             else {
+                if (!ctx->some_body_.empty()) {
+                    ctx->resp_.body.write(ctx->some_body_.c_str(),
+                                          ctx->some_body_.size());
+                    ctx->some_body_.clear();
+                }
                 ctx->resp_.body.write(at, length);
             }
             break;
