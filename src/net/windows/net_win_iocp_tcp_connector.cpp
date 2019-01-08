@@ -138,6 +138,10 @@ namespace net {
         if (ret < 0) {
             make_win_socket_error_code(error, fd);
         }
+        if (!new_conn_handler_) {
+            closesocket(fd);
+            return;
+        }
         new_conn_handler_(fd, error);
     }
 
