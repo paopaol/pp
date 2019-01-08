@@ -6,7 +6,7 @@ using namespace std::tr1::placeholders;
 
 namespace pp {
 namespace net {
-#define __user_data(ptr, type) ptr->user_data().AnyCast<type>()
+#define __user_data(ptr, type) ptr->user_data().any_cast<type>()
 
     http_client::http_client(io::event_loop* loop) : loop_(loop) {}
 

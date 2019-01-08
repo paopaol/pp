@@ -8,51 +8,51 @@
 
 namespace pp {
 
-struct Any {
-    Any(void) : m_tpIndex(std::type_index(typeid(void))) {}
-    Any(const Any& that) : m_ptr(that.Clone()), m_tpIndex(that.m_tpIndex) {}
-    Any(Any&& that) : m_ptr(std::move(that.m_ptr)), m_tpIndex(that.m_tpIndex) {}
+struct any {
+    any(void) : index_(std::type_index(typeid(void))) {}
+    any(const any& that) : ptr_(that.Clone()), index_(that.index_) {}
+    any(any&& that) : ptr_(std::move(that.ptr_)), index_(that.index_) {}
 
     //创建智能指针时，对于一般的类型，通过std::decay来移除引用和cv符，从而获取原始类型
     template <
         typename U,
         class = typename std::enable_if<
-            !std::is_same<typename std::decay<U>::type, Any>::value, U>::type>
-    Any(U&& value)
-        : m_ptr(new Derived<typename std::decay<U>::type>(
+            !std::is_same<typename std::decay<U>::type, any>::value, U>::type>
+    any(U&& value)
+        : ptr_(new Derived<typename std::decay<U>::type>(
               std::forward<U>(value))),
-          m_tpIndex(std::type_index(typeid(typename std::decay<U>::type)))
+          index_(std::type_index(typeid(typename std::decay<U>::type)))
     {
     }
 
-    bool IsNull() const
+    bool is_nil() const
     {
-        return !bool(m_ptr);
+        return !bool(ptr_);
     }
 
-    template <class U> bool Is() const
+    template <class U> bool is() const
     {
-        return m_tpIndex == std::type_index(typeid(U));
+        return index_ == std::type_index(typeid(U));
     }
 
-    //将Any转换为实际的类型
-    template <class U> U& AnyCast()
+    //将any转换为实际的类型
+    template <class U> U& any_cast()
     {
-        if (!Is<U>()) {
+        if (!is<U>()) {
             throw std::bad_cast();
         }
 
-        auto derived = dynamic_cast<Derived<U>*>(m_ptr.get());
+        auto derived = dynamic_cast<Derived<U>*>(ptr_.get());
         return derived->m_value;
     }
 
-    Any& operator=(const Any& a)
+    any& operator=(const any& a)
     {
-        if (m_ptr == a.m_ptr)
+        if (ptr_ == a.ptr_)
             return *this;
 
-        m_ptr     = a.Clone();
-        m_tpIndex = a.m_tpIndex;
+        ptr_   = a.Clone();
+        index_ = a.index_;
         return *this;
     }
 
@@ -81,16 +81,15 @@ private:
 
     BasePtr Clone() const
     {
-        if (m_ptr != nullptr)
-            return m_ptr->Clone();
+        if (ptr_ != nullptr)
+            return ptr_->Clone();
 
         return nullptr;
     }
 
-    BasePtr         m_ptr;
-    std::type_index m_tpIndex;
+    BasePtr         ptr_;
+    std::type_index index_;
 };
-
 
 }  // namespace pp
 #endif

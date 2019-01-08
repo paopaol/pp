@@ -62,12 +62,12 @@ namespace net {
         addr local_addr(errors::error_code& error);
         void enable_read(errors::error_code& error);
 
-        void set_user_data(const pp::Any& any)
+        void set_user_data(const pp::any& any)
         {
             user_data_ = any;
         }
 
-        pp::Any user_data()
+        pp::any user_data()
         {
             return user_data_;
         }
@@ -105,7 +105,7 @@ namespace net {
         ConnStatus             state;
         addr                   remote_;
         addr                   local_;
-        pp::Any                user_data_;
+        pp::any                user_data_;
         errors::error_code     err_;
         int                    bytes_written_;
         bool                   pending_read_;

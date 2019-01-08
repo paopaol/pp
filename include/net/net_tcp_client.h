@@ -28,7 +28,7 @@ namespace net {
         void dial(_time::Duration timeout = 0);
         void write(char* data, int len);
         void close();
-        void set_user_data(const pp::Any& any);
+        void set_user_data(const pp::any& any);
 
     private:
         void conn_connected(int fd, const errors::error_code& error);
@@ -58,7 +58,7 @@ namespace net {
         message_handler        handle_recv_data_;
         write_finished_handler handle_write_finished_;
         addr                   addr_;
-        pp::Any                any_;
+        pp::any                any_;
     };
     typedef std::shared_ptr<tcp_client> tcp_client_ref;
 }  // namespace net

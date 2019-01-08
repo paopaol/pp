@@ -50,7 +50,7 @@ namespace net {
         tcp_conn_->shutdown();
     }
 
-    void tcp_client::set_user_data(const pp::Any& any)
+    void tcp_client::set_user_data(const pp::any& any)
     {
         any_ = any;
     }
