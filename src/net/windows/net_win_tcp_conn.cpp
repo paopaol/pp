@@ -33,7 +33,7 @@ namespace net {
             [&](errors::error_code& error) { write_done(error); });
 
         event_fd_->closed(
-            [&](errors::error_code& error) { handle_close(error); });
+            [&](errors::error_code& error) { close_done(error); });
 
         errors::error_code err;
         socket_.set_nonblock(err);
@@ -59,7 +59,7 @@ namespace net {
         close_handler_ = handler;
     }
 
-    void tcp_conn::handle_close(const errors::error_code& error)
+    void tcp_conn::close_done(const errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
@@ -92,20 +92,6 @@ namespace net {
         if (read_buf_.Len() > 0 && msg_read_handler_) {
             msg_read_handler_(shared_from_this(), read_buf_, _time::now());
         }
-
-        // write_some_buffer_data(error);
-        // if (error.value() != 0) {
-        //   handle_close(error);
-        //  return;
-        //}
-
-        // if (evfd->pending_request_size() > 0) {
-        //     return;
-        // }
-
-        // if (error.value() != 0) {
-        //     handle_close(error);
-        // }
     }
 
     void tcp_conn::write_done(errors::error_code& error)
@@ -125,7 +111,7 @@ namespace net {
 
             start_write(data, len, error);
             if (error.value() != 0) {
-                handle_close(error);
+                close_done(error);
             }
             return;
         }
@@ -143,7 +129,7 @@ namespace net {
         // one io pending request
         write_some_buffer_data(error);
         if (error.value() != 0) {
-            handle_close(error);
+            close_done(error);
             return;
         }
 
@@ -154,7 +140,7 @@ namespace net {
         }
         start_read(error);
         if (error.value() != 0) {
-            handle_close(error);
+            close_done(error);
         }
     }
 
@@ -167,7 +153,7 @@ namespace net {
                 errors::error_code error;
                 write(slice.data(), slice.size(), error);
                 if (error.value() != 0) {
-                    handle_close(error);
+                    close_done(error);
                 }
             });
         }
@@ -365,7 +351,7 @@ namespace net {
             enable_read(err);
             // start_read(error);
             // if (error.value() != 0) {
-            //    handle_close(error);
+            //    close_done(error);
             //    return;
             //}
         }

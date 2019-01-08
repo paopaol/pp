@@ -80,7 +80,7 @@ namespace net {
     private:
         void read_done(errors::error_code& error);
         void write_done(errors::error_code& error);
-        void handle_close(const errors::error_code& error);
+        void close_done(const errors::error_code& error);
         int  write(const void* data, size_t len, errors::error_code& error);
         void start_read(errors::error_code& error);
         void start_write(const void* data, size_t len,
