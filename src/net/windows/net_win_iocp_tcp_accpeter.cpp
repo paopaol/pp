@@ -99,7 +99,6 @@ namespace net {
 
         if (!SUCCEEDED_WITH_IOCP(ret, ecode)) {
             make_win_socket_error_code(error, accept_socket);
-            handle_accpet_done(-1, error);
             return -1;
         }
         evfd->queued_pending_request(request);
@@ -122,7 +121,7 @@ namespace net {
                                ( char* )&active->io_fd, sizeof(active->io_fd));
         if (ret < 0) {
             make_win_socket_error_code(error, client_fd);
-            handle_accpet_done(-1, error);
+            handle_accpet_done(client_fd, error);
             return;
         }
 

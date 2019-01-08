@@ -43,9 +43,10 @@ namespace net {
     {
         win_iocp_tcp_accpeter* accpeter =
             reinterpret_cast<win_iocp_tcp_accpeter*>(accpeter_);
-        accpeter->bind(bind_addr_, error);
 
+        accpeter->bind(bind_addr_, error);
         hht_return_if_error(error, false);
+
         accpeter->listen(error);
         hht_return_if_error(error, false);
         return true;
