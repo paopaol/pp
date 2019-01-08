@@ -92,9 +92,7 @@ namespace net {
 
         ecode = ::bind(evfd->fd(), ( const sockaddr* )&local, sizeof local);
         if (ecode != 0) {
-            error = hht_make_error_code(
-                static_cast<errors::error>(errors::error::NET_ERROR));
-            closesocket(evfd->fd());
+            make_win_socket_error_code(error, evfd->fd());
             return -1;
         }
         evfd->enable_connect(std::bind(&tcp_connector::connect_done, this),
@@ -106,9 +104,6 @@ namespace net {
                        0, &send, (LPOVERLAPPED) & (request->Overlapped));
         if (!SUCCEEDED_WITH_IOCP(ret, ecode)) {
             make_win_socket_error_code(error, evfd->fd());
-            if (new_conn_handler_) {
-                new_conn_handler_(-1, error);
-            }
             return -1;
         }
 
@@ -135,9 +130,6 @@ namespace net {
         int  fd   = evfd->fd();
 
         auto active = evfd->remove_active_request();
-        if (!new_conn_handler_) {
-            return;
-        }
 
         // if not upadte fd of SO_UPDATE_CONNECT_CONTEXT,
         // then after getpeername will return 10057
