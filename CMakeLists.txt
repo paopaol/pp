@@ -7,6 +7,7 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON "export symbols")
 
 set(PP_BUILD_INSTALL FALSE CACHE BOOL "install library or not")
 set(PP_DISABLED_TEST FALSE CACHE BOOL "build uint test or not")
+set(PP_DISABLE_EXAMPLE FALSE CACHE BOOL "build example or not")
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   set(IS_WIN TRUE)
@@ -149,7 +150,18 @@ if(WIN32)
 endif()
 
 if(NOT PP_DISABLED_TEST)
-    add_subdirectory(test)
+  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  add_subdirectory(googletest)
+  if(CMAKE_VERSION VERSION_LESS 2.8.11)
+    include_directories("${gtest_SOURCE_DIR}/include")
+  endif()
+  include(GoogleTest)
+
+  add_subdirectory(test)
+endif()
+
+if(NOT PP_DISABLE_EXAMPLES)
+  add_subdirectory(example)
 endif()
 
 

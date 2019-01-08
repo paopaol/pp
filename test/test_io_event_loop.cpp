@@ -30,7 +30,7 @@ TEST_F(test_io_event_loop, test_run_in_loop_other_thread)
     std::thread other_thread([&]() {
         // 3 seconds after, run start run this thread function
         bool notify;
-		chan.read(notify);
+        chan.read(notify);
         loop_.run_in_loop(
             [&]() { EXPECT_EQ(loop_.in_created_thread(), true); });
     });
