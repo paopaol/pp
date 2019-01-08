@@ -46,6 +46,19 @@ TEST_F(test_io_event_loop, test_run_in_loop_other_thread)
     loop_.exec();
 }
 
+TEST_F(test_io_event_loop, test_double_loop_in_one_thread)
+{
+    std::thread t([]() {
+        {
+            io::event_loop loop1;
+        }
+        {
+            io::event_loop loop2;
+        }
+    });
+    t.join();
+}
+
 int main(int argc, char* argv[])
 {
     ::testing::InitGoogleTest(&argc, argv);
