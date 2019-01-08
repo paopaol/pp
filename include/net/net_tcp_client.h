@@ -51,9 +51,6 @@ namespace net {
         tcp_connector_ref tcp_connector_;
         tcp_conn_ref      tcp_conn_;
 
-        // only used for connect timeout
-        _time::timer_ref connect_timer_;
-
         connection_handler     handle_connection_;
         message_handler        handle_recv_data_;
         write_finished_handler handle_write_finished_;
