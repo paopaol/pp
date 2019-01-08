@@ -347,7 +347,7 @@ namespace net {
         socket::shutdown_write(evfd->fd());
     }
 
-    void tcp_conn::connect_established(const errors::error_code &error)
+    void tcp_conn::connect_established(const errors::error_code& error)
     {
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
@@ -371,8 +371,7 @@ namespace net {
         }
 
         if (connection_handler_) {
-            connection_handler_(shared_from_this(), _time::time(),
-                                error);
+            connection_handler_(shared_from_this(), _time::time(), error);
         }
     }
 
