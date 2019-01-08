@@ -24,6 +24,10 @@ namespace net {
                                                    close_handler;
     typedef std::function<void(int bytes_written)> write_finished_handler;
 
+    // if error is not 0 and conn->connected() is true,
+    // that's say, the conn is bad, for tcp_client,it is connect failed.
+    // if conn->connected() is false, that is, che conn is closed
+    // if conn->connected() is true, error is 0, that is ,the conn is connected
     typedef std::function<void(const net::tcp_conn_ref&, const _time::time&,
                                const errors::error_code& error)>
         connection_handler;

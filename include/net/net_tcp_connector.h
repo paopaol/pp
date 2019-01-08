@@ -28,13 +28,6 @@ namespace net {
         int  start_connect(_time::Duration timeout, errors::error_code& error);
         int  cancel_connect();
         void connect_done();
-        // detach the tcp_connector's event fd from loop,
-        // if connector connect failed,
-        // we can't detach the evfd.
-        // but if connect success, we must detach it,becouse
-        // after connect ok,we will use the socket create one tcp_conn,
-        // when tcp_conn connect_established,it attach the tcp_conn's
-        // event fd to the loop
         void detach_loop();
 
     private:

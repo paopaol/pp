@@ -66,6 +66,9 @@ namespace net {
         tcp_conn_->data_write_finished(handle_write_finished_);
         tcp_conn_->set_user_data(any_);
 
+        // although,the conn is established here,but it maybe
+        // a bad socket,eg, connect timeout,connect failed.
+        // so error is not 0.
         tcp_conn_->connect_established(error);
     }
 
