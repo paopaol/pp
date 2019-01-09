@@ -326,10 +326,11 @@ namespace net {
 
     void tcp_conn::shutdown_in_loop()
     {
+        assert(loop_->in_created_thread());
+
         io::iocp_event_fd* evfd =
             static_cast<io::iocp_event_fd*>(event_fd_.get());
 
-        assert(loop_->in_created_thread());
         socket::shutdown_write(evfd->fd());
     }
 
