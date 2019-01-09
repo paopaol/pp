@@ -8,21 +8,22 @@ using namespace std::tr1::placeholders;
 io::event_loop                          loop;
 net::http_client                        client(&loop);
 static std::weak_ptr<net::http_request> wreq;
-static bool canceling = false;
+static bool                             canceling = false;
 
 static size_t read_body(const char* data, size_t len)
 {
     fwrite(data, 1, len, stdout);
-	if (canceling) {
-		return 0;
-	}
+
+    if (canceling) {
+        return len;
+    }
+
     auto req = wreq.lock();
     if (!req) {
         return 0;
     }
     client.cancel(req);
-	canceling = true;
-    return 0;
+    canceling = true;
 
     return len;
 }
@@ -34,15 +35,13 @@ static size_t read_body(const char* data, size_t len)
 static void handle_resp(net::http_response*       resp,
                         const errors::error_code& error)
 {
-    //std::shared_ptr<void> __(nullptr, std::bind([&]() { loop.quit(); }));
-
     if (error.value() != 0) {
         std::cout << error.message();  //<< std::endl;
-		loop.quit();
+        loop.quit();
         return;
     }
     if (resp->is_done()) {
-		loop.quit();
+        loop.quit();
         return;
     }
     std::cout << "status code:" << resp->status_code << std::endl;
@@ -53,7 +52,7 @@ static void handle_resp(net::http_response*       resp,
         std::cout << header.first << " : " << header.second << std::endl;
     }
     // if set body writer,the body will be readed
-    resp->body = io::writer(read_body);
+	resp->body = io::writer(read_body);
 }
 
 int main(int argc, char* argv[])
@@ -70,6 +69,6 @@ int main(int argc, char* argv[])
         std::cout << err.message() << std::endl;
         return 1;
     }
-	wreq = request;
+    wreq = request;
     loop.exec();
 }
