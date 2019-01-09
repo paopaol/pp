@@ -346,15 +346,9 @@ namespace net {
         event_fd_->tie(shared_from_this());
         errors::error_code err;
 
-        // first, if no pending io request, we push one read request
-        // at least, there was must one read request
+        // just associate on iocp handle
         if (evfd->pending_request_size() == 0) {
             enable_read(err);
-            // start_read(error);
-            // if (error.value() != 0) {
-            //    close_done(error);
-            //    return;
-            //}
         }
 
         if (connection_handler_) {
