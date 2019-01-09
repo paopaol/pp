@@ -53,8 +53,9 @@ namespace net {
 
     socket::~socket()
     {
-        shutdown(fd_, SD_SEND);
+		close(fd_);
     }
+
     int socket::create(int af, int type, errors::error_code& error)
     {
         int fd = static_cast<int>(
@@ -170,6 +171,12 @@ namespace net {
         shutdown(( SOCKET )fd, SD_SEND);
         return 0;
     }
+
+	int socket::close(int fd)
+	{
+		closesocket((SOCKET)fd);
+		return 0;
+	}
 
     addr socket::remote_addr(errors::error_code& error)
     {

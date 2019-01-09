@@ -46,6 +46,7 @@ namespace net {
         int listen(errors::error_code& error);
 
         static int shutdown_write(int fd);
+		static int close(int fd);
 
         friend int new_nonblock_socket(int af, int type,
                                        errors::error_code& error);
