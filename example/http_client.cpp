@@ -5,13 +5,25 @@
 using namespace pp;
 using namespace std::tr1::placeholders;
 
-static int              complete_numbers   = 0;
-static int              concurrent_numbers = 0;
-static _time::timer_ref abort_timer;
+io::event_loop                          loop;
+net::http_client                        client(&loop);
+static std::weak_ptr<net::http_request> wreq;
+static bool canceling = false;
 
 static size_t read_body(const char* data, size_t len)
 {
     fwrite(data, 1, len, stdout);
+	if (canceling) {
+		return 0;
+	}
+    auto req = wreq.lock();
+    if (!req) {
+        return 0;
+    }
+    client.cancel(req);
+	canceling = true;
+    return 0;
+
     return len;
 }
 
@@ -20,20 +32,17 @@ static size_t read_body(const char* data, size_t len)
 // 2, on errror
 // 3, on  resp done
 static void handle_resp(net::http_response*       resp,
-                        const errors::error_code& error, io::event_loop* loop)
+                        const errors::error_code& error)
 {
-    std::shared_ptr<void> __(nullptr, std::bind([&]() {
-                                 ++complete_numbers;
-                                 if (complete_numbers == concurrent_numbers) {
-                                     loop->quit();
-                                 }
-                             }));
+    //std::shared_ptr<void> __(nullptr, std::bind([&]() { loop.quit(); }));
 
     if (error.value() != 0) {
         std::cout << error.message();  //<< std::endl;
+		loop.quit();
         return;
     }
     if (resp->is_done()) {
+		loop.quit();
         return;
     }
     std::cout << "status code:" << resp->status_code << std::endl;
@@ -44,27 +53,23 @@ static void handle_resp(net::http_response*       resp,
         std::cout << header.first << " : " << header.second << std::endl;
     }
     // if set body writer,the body will be readed
-    // resp->body = io::writer(read_body);
+    resp->body = io::writer(read_body);
 }
 
 int main(int argc, char* argv[])
 {
-    io::event_loop   loop;
-    net::http_client client(&loop);
 
-    std::string url    = argv[1];
-    concurrent_numbers = atoi(argv[2]);
+    std::string url = argv[1];
 
-    for (int i = 0; i < concurrent_numbers; i++) {
-        auto request = client.new_request(
-            url, net::http_method::kGet, std::bind(handle_resp, _1, _2, &loop));
+    auto request = client.new_request(url, net::http_method::kGet,
+                                      std::bind(handle_resp, _1, _2));
 
-        errors::error_code err;
-        client.run(request, err);
-        if (err.value() != 0) {
-            std::cout << err.message() << std::endl;
-            return 1;
-        }
+    errors::error_code err;
+    client.run(request, err);
+    if (err.value() != 0) {
+        std::cout << err.message() << std::endl;
+        return 1;
     }
+	wreq = request;
     loop.exec();
 }
