@@ -45,9 +45,13 @@ namespace net {
         tcp_conn_->write(data, len);
     }
 
+	void tcp_client::shutdown()
+	{
+        tcp_conn_->shutdown();
+	}
     void tcp_client::close()
     {
-        tcp_conn_->shutdown();
+		tcp_conn_->close();
     }
 
     void tcp_client::set_user_data(const pp::any& any)
