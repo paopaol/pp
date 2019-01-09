@@ -102,12 +102,12 @@ namespace io {
 
     void event_loop::run_in_loop(const Functor& func)
     {
-        if (in_created_thread()) {
-            func();
-        }
-        else {
-            move_to_loop_thread(func);
-        }
+        // if (in_created_thread()) {
+        //     func();
+        // }
+        // else {
+        move_to_loop_thread(func);
+        // }
     }
 
     void event_loop::move_to_loop_thread(const Functor& func)
@@ -117,9 +117,9 @@ namespace io {
             func_list_.push_back(func);
         }
 
-        if (!in_created_thread()) {
-            wakeup();
-        }
+        // if (!in_created_thread()) {
+        wakeup();
+        // }
     }
 
     void event_loop::update_event_fd(event_fd* event, errors::error_code& error)
