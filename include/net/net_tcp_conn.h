@@ -50,7 +50,7 @@ namespace net {
         void write(const void* data, size_t len);
         void write(bytes::Buffer& buffer);
 
-        int  close();
+        void close();
         void shutdown();
         void connect_established(const errors::error_code& error);
         void connect_destroyed(const errors::error_code& error);

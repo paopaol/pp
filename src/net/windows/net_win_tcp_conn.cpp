@@ -129,7 +129,6 @@ namespace net {
         // one io pending request
         write_some_buffer_data(error);
         if (error.value() != 0) {
-            close_done(error);
             return;
         }
 
@@ -139,9 +138,6 @@ namespace net {
             return;
         }
         start_read(error);
-        if (error.value() != 0) {
-            close_done(error);
-        }
     }
 
     void tcp_conn::write(const void* data, size_t len)
@@ -218,6 +214,7 @@ namespace net {
         if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
             error = hht_make_error_code(errors::error::NET_ERROR);
             error.suffix_msg(errors::win_errstr(ecode));
+            loop_->run_in_loop([&]() { close_done(errors::error_code()); });
             return;
         }
         evfd->queued_pending_request(request);
@@ -256,6 +253,7 @@ namespace net {
         if (!SUCCEEDED_WITH_IOCP(ret == 0, ecode)) {
             error = hht_make_error_code(errors::error::NET_ERROR);
             error.suffix_msg(errors::win_errstr(ecode));
+            loop_->run_in_loop([&]() { close_done(errors::error_code()); });
             return;
         }
 
@@ -280,15 +278,15 @@ namespace net {
         });
     }
 
-    int tcp_conn::close()
+    void tcp_conn::close()
     {
-        // state = DisConnecting;
-        // CloseHandle((HANDLE)event_fd_->fd());
-        // if (close_handler_) {
-        //    close_handler_();
-        //}
+        if (state != Connected) {
+            return;
+        }
+        state = DisConnecting;
+        loop_->run_in_loop([&]() { socket::close(event_fd_->fd()); });
 
-        return 0;
+        return;
     }
 
     addr tcp_conn::remote_addr(errors::error_code& error)
