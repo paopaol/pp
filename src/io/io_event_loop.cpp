@@ -75,11 +75,17 @@ namespace io {
         assert(!execing_ && "io::event_loop has been stoped!");
         assert(in_created_thread());
         execing_ = true;
+        std::vector<Functor> tmp_func_list_;
 
         while (!exit_) {
             // first, run pending functions
-            for (auto functor = func_list_.begin(); functor != func_list_.end();
-                 functor++) {
+            {
+                system::MutexLockGuard _(func_list_mutex_);
+                tmp_func_list_ = func_list_;
+                func_list_.clear();
+            }
+            for (auto functor = tmp_func_list_.begin();
+                 functor != tmp_func_list_.end(); functor++) {
                 if (*functor) {
                     (*functor)();
                 }
