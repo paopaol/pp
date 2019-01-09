@@ -46,6 +46,7 @@ namespace net {
     private:
         http_response_handler resp_handler_;
         bool                  handler_called_;
+        bool                  abort_;
     };
 
     typedef std::shared_ptr<http_request> http_request_ref;
@@ -82,6 +83,7 @@ namespace net {
         http_request_ref new_request(const std::string& url, http_method method,
                                      const http_response_handler& resp_handler);
         void run(const http_request_ref& request, errors::error_code& error);
+        void cancel(const http_request_ref& request);
 
     private:
         typedef std::weak_ptr<http_conn_ctx> http_conn_ctx_wref;

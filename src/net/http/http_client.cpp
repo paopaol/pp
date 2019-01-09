@@ -1,3 +1,4 @@
+#include <io/io_event_loop.h>
 #include <net/http/net_http_client.h>
 
 #include "http_conn_ctx.h"
@@ -20,6 +21,7 @@ namespace net {
         request->version         = { 1, 1 };
         request->resp_handler_   = resp_handler;
         request->handler_called_ = false;
+        request->abort_          = false;
 
         return request;
     }
@@ -130,6 +132,27 @@ namespace net {
         client->dial(0);
         add_client(client, ctx);
     }
+    void http_client::cancel(const http_request_ref& request)
+    {
+        std::weak_ptr<http_request> wreq(request);
+        loop_->run_in_loop([&, wreq]() {
+            http_request_ref req = wreq.lock();
+            if (!req) {
+                return;
+            }
+
+            for (auto client = client_list_.begin();
+                 client != client_list_.end(); client++) {
+                auto ctx = client->first;
+                if (ctx->request_ == req) {
+                    auto cli = client->second;
+                    cli->close();
+                    ctx->request_->abort_ = true;
+                    return;
+                }
+            }
+        });
+    }
 
     void http_client::send_request(const net::tcp_conn_ref&  conn,
                                    const _time::time&        now,
@@ -140,9 +163,15 @@ namespace net {
 
         auto request = ctx->request_;
 
-        // conn closed
+        // conn closed or connecting failed
         if (!conn->connected() || error.value() != 0) {
-            auto err = ctx->error_.value() == 0 ? error : ctx->error_;
+            ctx->resp_.done_ = true;
+            auto err         = ctx->error_.value() == 0 ? error : ctx->error_;
+            if (request->abort_) {
+                err = hht_make_error_code(
+                    static_cast<errors::error>(errors::error::NET_ERROR));
+                err.suffix_msg("abort");
+            }
             // if some error occured,notify the user
             handle_resp(&ctx->resp_, err);
             remove_client(ctx);
@@ -161,11 +190,10 @@ namespace net {
 
         // befor parsing,we must post a read,
         // if not do this, when conn closed, we can't kown
-        conn->async_read();
         // when parsing, error occured
+        conn->async_read();
         if (ctx->error_.value() != 0) {
-            ctx->resp_.done_ = true;
-            conn->shutdown();
+            conn->close();
             return;
         }
 
@@ -175,13 +203,11 @@ namespace net {
             req->handler_called_ = true;
         }
         if (ctx->resp_.body.is_nil() && req->handler_called_) {
-            ctx->resp_.done_ = true;
-            conn->shutdown();
+            conn->close();
             return;
         }
         if (ctx->parse_complete_) {
-            ctx->resp_.done_ = true;
-            conn->shutdown();
+            conn->close();
         }
     }
 }  // namespace net
