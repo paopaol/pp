@@ -18,9 +18,10 @@ namespace net {
         resp_.request = request_;
     }
 
-    const static char* kUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, "
-        "like Gecko) Chrome/70.0.3538.102 Safari/537.36 OPR/57.0.3098.106";
+    // const static char* kUserAgent =
+    //     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
+    //     " "like Gecko) Chrome/70.0.3538.102 Safari/537.36 OPR/57.0.3098.106";
+    const static char* kUserAgent = "curl/7.62.0";
 
     const static char* kCacheControl = "max-age=0";
 
@@ -36,6 +37,21 @@ namespace net {
     {
         auto ctx = static_cast<http_conn_ctx*>(p->data);
         assert(ctx);
+        switch (ctx->type_) {
+        case HTTP_RESPONSE: {
+            ctx->resp_.status_code   = p->status_code;
+            ctx->resp_.version.major = p->http_major;
+            ctx->resp_.version.minor = p->http_minor;
+            break;
+        }
+        case HTTP_REQUEST: {
+            ctx->request_->version.major = p->http_major;
+            ctx->request_->version.minor = p->http_minor;
+            break;
+        }
+        default:
+            break;
+        }
         ctx->parse_header_complete_ = true;
         return 0;
     }
@@ -44,21 +60,6 @@ namespace net {
     {
         auto ctx = static_cast<http_conn_ctx*>(_->data);
         assert(ctx);
-        switch (ctx->type_) {
-        case HTTP_RESPONSE: {
-            ctx->resp_.status_code   = _->status_code;
-            ctx->resp_.version.major = _->http_major;
-            ctx->resp_.version.minor = _->http_minor;
-            break;
-        }
-        case HTTP_REQUEST: {
-            ctx->request_->version.major = _->http_major;
-            ctx->request_->version.minor = _->http_minor;
-            break;
-        }
-        default:
-            break;
-        }
 
         ctx->parse_complete_ = true;
         return 0;
@@ -205,10 +206,10 @@ namespace net {
     {
         std::string longline;
 
-        request_->headers["Cache-Control"]   = kCacheControl;
-        request_->headers["Accept"]          = kAccept;
-        request_->headers["Accept-Language"] = kAcceptLanguage;
-        request_->headers["User-Agent"]      = kUserAgent;
+        // request_->headers["Cache-Control"]   = kCacheControl;
+        request_->headers["Accept"] = kAccept;
+        // request_->headers["Accept-Language"] = kAcceptLanguage;
+        request_->headers["User-Agent"] = kUserAgent;
 
         for (auto header = request_->headers.begin();
              header != request_->headers.end(); header++) {
