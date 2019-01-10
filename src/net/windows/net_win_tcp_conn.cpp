@@ -27,13 +27,16 @@ namespace net {
           bytes_written_(0),
           pending_read_(false)
     {
-        event_fd_->data_recved(
-            [&](errors::error_code& error) { read_done(error); });
-        event_fd_->set_write_handler(
-            [&](errors::error_code& error) { write_done(error); });
+        event_fd_->data_recved([&](errors::error_code& error) {
+            read_done(errors::error_code());
+        });
+        event_fd_->set_write_handler([&](errors::error_code& error) {
+            write_done(errors::error_code());
+        });
 
-        event_fd_->closed(
-            [&](errors::error_code& error) { close_done(error); });
+        event_fd_->closed([&](errors::error_code& error) {
+            close_done(errors::error_code());
+        });
 
         errors::error_code err;
         socket_.set_nonblock(err);
@@ -110,9 +113,6 @@ namespace net {
             int         len  = active->total_bytes - active->sent_bytes;
 
             start_write(data, len, error);
-            if (error.value() != 0) {
-                close_done(error);
-            }
             return;
         }
 
@@ -148,9 +148,6 @@ namespace net {
             loop_->run_in_loop([&, slice]() {
                 errors::error_code error;
                 write(slice.data(), slice.size(), error);
-                if (error.value() != 0) {
-                    close_done(error);
-                }
             });
         }
     }
