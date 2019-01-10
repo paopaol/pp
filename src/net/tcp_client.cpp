@@ -45,13 +45,13 @@ namespace net {
         tcp_conn_->write(data, len);
     }
 
-	void tcp_client::shutdown()
-	{
+    void tcp_client::shutdown()
+    {
         tcp_conn_->shutdown();
-	}
+    }
     void tcp_client::close()
     {
-		tcp_conn_->close();
+        tcp_conn_->close();
     }
 
     void tcp_client::set_user_data(const pp::any& any)
@@ -64,12 +64,12 @@ namespace net {
         tcp_connector_->detach_loop();
         tcp_conn_ = std::make_shared<tcp_conn>(loop_, fd, error);
 
-        tcp_conn_->connected(handle_connection_);
         tcp_conn_->closed(std::bind(&tcp_client::conn_closed, this, _1, _2));
         tcp_conn_->data_recved(handle_recv_data_);
         tcp_conn_->data_write_finished(handle_write_finished_);
         tcp_conn_->set_user_data(any_);
 
+        tcp_conn_->connected(handle_connection_);
         // although,the conn is established here,but it maybe
         // a bad socket,eg, connect timeout,connect failed.
         // so error is not 0.
