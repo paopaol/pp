@@ -161,22 +161,35 @@ namespace net {
         auto ctx = __user_data(conn, http_conn_ctx_wref).lock();
         assert(ctx);
 
-        auto request = ctx->request_;
+        auto               request = ctx->request_;
+        errors::error_code err;
 
-        // conn closed or connecting failed
-        if (!conn->connected() || error.value() != 0) {
-            ctx->resp_.done_ = true;
-            auto err         = ctx->error_.value() == 0 ? error : ctx->error_;
-            if (request->abort_) {
+        if (!conn->connected() || error) {
+            // connecting failed
+            if (conn->connected() && error) {
+                err = error;
+            }
+            // http message parse error
+            if (!conn->connected() && ctx->error_) {
+                err = ctx->error_;
+            }
+            // abort by user
+            if (!conn->connected() && request->abort_) {
                 err = hht_make_error_code(
                     static_cast<errors::error>(errors::error::NET_ERROR));
                 err.suffix_msg("abort");
             }
-            // if some error occured,notify the user
+            // remote closed and did not read complete all http message
+            if (!conn->connected() && !ctx->parse_complete_ && !err) {
+                err = hht_make_error_code(
+                    static_cast<errors::error>(errors::error::NET_ERROR));
+                err.suffix_msg("remote closed");
+            }
+            ctx->resp_.done_ = true;
             handle_resp(&ctx->resp_, err);
             remove_client(ctx);
-            return;
         }
+
         ctx->resp_.done_ = false;
         write_request_line(conn, ctx);
     }
