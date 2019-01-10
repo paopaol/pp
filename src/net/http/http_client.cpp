@@ -220,6 +220,10 @@ namespace net {
             return;
         }
         if (ctx->parse_complete_) {
+            if (!ctx->some_body_.empty() && !ctx->resp_.body.is_nil()) {
+                ctx->resp_.body.write(ctx->some_body_.data(),
+                                      ctx->some_body_.size());
+            }
             conn->close();
         }
     }
