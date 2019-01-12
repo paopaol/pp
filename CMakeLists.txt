@@ -38,6 +38,12 @@ include_directories(
   src/io
   src/net
   )
+
+####strings
+set(strings-src-list
+  src/strings/strings.cpp
+  )
+
 ####io
 set(io-src-list
   src/io/io.cpp
@@ -137,7 +143,9 @@ endif()
 
 
 
-add_library(pp ${io-src-list}
+add_library(pp
+  ${strings-src-list}
+  ${io-src-list}
   ${net-src-list}
   ${fmt-src-list}
   ${system-src-list}

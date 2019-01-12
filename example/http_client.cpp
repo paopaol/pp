@@ -32,14 +32,18 @@ static size_t read_body(const char* data, size_t len)
 // 1, on header recved
 // 2, on errror
 // 3, on  resp done
+
+// 1- failed:{
+// connect failed
+// conn broken close
+//}
+// 2- success:{
+// got resp
+//}
+
 static void handle_resp(net::http_response*       resp,
                         const errors::error_code& error)
 {
-    if (error.value() != 0) {
-        std::cout << error.message();  //<< std::endl;
-        loop.quit();
-        return;
-    }
     if (resp->is_done()) {
         loop.quit();
         return;
@@ -52,7 +56,7 @@ static void handle_resp(net::http_response*       resp,
         std::cout << header.first << " : " << header.second << std::endl;
     }
     // if set body writer,the body will be readed
-	resp->body = io::writer(read_body);
+    resp->body = io::writer(read_body);
 }
 
 int main(int argc, char* argv[])
