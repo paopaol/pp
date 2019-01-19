@@ -41,10 +41,13 @@ static size_t read_body(const char* data, size_t len)
 // got resp
 //}
 
-static void handle_resp(net::http_response*       resp,
+static void handle_resp(net::http_response* resp, bool finished,
                         const errors::error_code& error)
 {
-    if (resp->is_done()) {
+    if (finished || error) {
+        if (error) {
+            std::cout << error.message() << std::endl;
+        }
         loop.quit();
         return;
     }
@@ -65,7 +68,7 @@ int main(int argc, char* argv[])
     std::string url = argv[1];
 
     auto request = client.new_request(url, net::http_method::kGet,
-                                      std::bind(handle_resp, _1, _2));
+                                      std::bind(handle_resp, _1, _2, _3));
 
     errors::error_code err;
     client.run(request, err);
