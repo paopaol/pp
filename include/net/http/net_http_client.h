@@ -24,7 +24,7 @@ namespace net {
     typedef std::map<std::string, std::string> http_header;
 
     class http_response;
-    typedef std::function<void(http_response*            resp,
+    typedef std::function<void(http_response* resp, bool finished,
                                const errors::error_code& error)>
         http_response_handler;
 
@@ -57,11 +57,6 @@ namespace net {
 
     class http_response {
     public:
-        bool is_done()
-        {
-            return done_;
-        }
-
         int                         status_code;
         std::string                 status_line;
         http_header                 headers;
@@ -71,8 +66,6 @@ namespace net {
 
     private:
         friend class http_client;
-
-        bool done_;
     };
 
     class http_client {
@@ -112,8 +105,9 @@ namespace net {
                         const http_conn_ctx_ref& ctx);
 
         void send_request(const net::tcp_conn_ref& conn, const _time::time& now,
-                          const errors::error_code& error);
-        void handle_resp(const http_response*      resp,
+                          const errors::error_code&           error,
+                          const std::weak_ptr<http_conn_ctx>& wkctx);
+        void handle_resp(const http_response* resp, bool finished,
                          const errors::error_code& error);
 
         void recv_resp(const tcp_conn_ref& conn, bytes::Buffer& buffer,

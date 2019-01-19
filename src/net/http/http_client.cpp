@@ -88,13 +88,13 @@ namespace net {
         client_list_[ctx] = client;
     }
 
-    void http_client::handle_resp(const http_response*      resp,
+    void http_client::handle_resp(const http_response* resp, bool finished,
                                   const errors::error_code& error)
     {
         auto request = resp->request.lock();
 
         if (request && request->resp_handler_) {
-            request->resp_handler_(( http_response* )resp, error);
+            request->resp_handler_(( http_response* )resp, finished, error);
         }
     }
 
@@ -122,8 +122,9 @@ namespace net {
         auto client = std::make_shared<tcp_client>(loop_, addr(host, port));
         ctx->request_->headers["Host"] = host;
 
+        std::weak_ptr<http_conn_ctx> wkctx = ctx;
         client->dial_done(
-            std::bind(&http_client::send_request, this, _1, _2, _3));
+            std::bind(&http_client::send_request, this, _1, _2, _3, wkctx));
         client->message_recved(
             std::bind(&http_client::recv_resp, this, _1, _2, _3));
 
@@ -132,6 +133,7 @@ namespace net {
         client->dial(0);
         add_client(client, ctx);
     }
+
     void http_client::cancel(const http_request_ref& request)
     {
         std::weak_ptr<http_request> wreq(request);
@@ -145,52 +147,47 @@ namespace net {
                  client != client_list_.end(); client++) {
                 auto ctx = client->first;
                 if (ctx->request_ == req) {
-                    auto cli = client->second;
-                    cli->close();
+                    auto cli              = client->second;
                     ctx->request_->abort_ = true;
+                    ctx->error_           = hht_make_error_code(
+                        static_cast<std::errc>(std::errc::connection_aborted));
+                    cli->close();
                     return;
                 }
             }
         });
     }
 
-    void http_client::send_request(const net::tcp_conn_ref&  conn,
-                                   const _time::time&        now,
-                                   const errors::error_code& error)
+    void http_client::send_request(const net::tcp_conn_ref&            conn,
+                                   const _time::time&                  now,
+                                   const errors::error_code&           error,
+                                   const std::weak_ptr<http_conn_ctx>& wkctx)
     {
-        auto ctx = __user_data(conn, http_conn_ctx_wref).lock();
+        // auto ctx = __user_data(conn, http_conn_ctx_wref).lock();
+        auto ctx = wkctx.lock();
         assert(ctx);
 
         auto               request = ctx->request_;
         errors::error_code err;
 
-        if (!conn->connected() || error) {
-            // connecting failed
-            if (conn->connected() && error) {
-                err = error;
-            }
-            // http message parse error
-            if (!conn->connected() && ctx->error_) {
-                err = ctx->error_;
-            }
-            // abort by user
-            if (!conn->connected() && request->abort_) {
-                err = hht_make_error_code(
-                    static_cast<errors::error>(errors::error::NET_ERROR));
-                err.suffix_msg("abort");
-            }
-            // remote closed and did not read complete all http message
-            if (!conn->connected() && !ctx->parse_complete_ && !err) {
-                err = hht_make_error_code(
-                    static_cast<errors::error>(errors::error::NET_ERROR));
-                err.suffix_msg("remote closed");
-            }
-            ctx->resp_.done_ = true;
-            handle_resp(&ctx->resp_, err);
+        // connecting failed
+        if (error) {
+            handle_resp(&ctx->resp_, false, error);
             remove_client(ctx);
+            return;
         }
-
-        ctx->resp_.done_ = false;
+        // conn closed
+        if (!conn->connected()) {
+            bool finished = true;
+            if (!ctx->parse_complete_) {
+                // failed done
+                err      = ctx->error_;
+                finished = false;
+            }
+            handle_resp(&ctx->resp_, finished, err);
+            remove_client(ctx);
+            return;
+        }
         write_request_line(conn, ctx);
     }
 
@@ -201,8 +198,8 @@ namespace net {
         assert(ctx);
         auto req = ctx->request_;
 
-        // befor parsing,we must post a read,
-        // if not do this, when conn closed, we can't kown
+        // before parsing,we must post a read,
+        // if not do this, when conn closed, we can't recv close notify
         // when parsing, error occured
         conn->async_read();
         if (ctx->error_.value() != 0) {
@@ -212,10 +209,11 @@ namespace net {
 
         ctx->parsing_http_msg(buffer);
         if (ctx->parse_header_complete_ && !req->handler_called_) {
-            handle_resp(&ctx->resp_, errors::error_code());
+            handle_resp(&ctx->resp_, false, errors::error_code());
             req->handler_called_ = true;
         }
         if (ctx->resp_.body.is_nil() && req->handler_called_) {
+            ctx->parse_complete_ = true;
             conn->close();
             return;
         }
