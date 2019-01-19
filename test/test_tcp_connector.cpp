@@ -4,13 +4,19 @@
 
 using namespace pp;
 
+const static int kBadPort = 808;
+const static int kPort    = 80;
+
+const static char* kAddr    = "220.181.112.244";
+const static char* kBadAddr = "xxxx.xxxx.xxx.111";
+
 TEST(net_tcp_connector, connect_success)
 {
     errors::error_code err;
     io::event_loop     loop;
     // baidu
-    auto connector = std::make_shared<net::tcp_connector>(
-        &loop, net::addr("220.181.112.244", 80));
+    auto connector =
+        std::make_shared<net::tcp_connector>(&loop, net::addr(kAddr, kPort));
 
     connector->set_new_conn_handler(
         [&](int fd, const errors::error_code& error) {
@@ -27,8 +33,8 @@ TEST(net_tcp_connector, connect_timeout)
     errors::error_code err;
     io::event_loop     loop;
     // baidu, 808 is bad port
-    auto connector = std::make_shared<net::tcp_connector>(
-        &loop, net::addr("220.181.112.244", 808));
+    auto connector =
+        std::make_shared<net::tcp_connector>(&loop, net::addr(kAddr, kBadPort));
 
     connector->set_new_conn_handler(
         [&](int fd, const errors::error_code& error) {
@@ -46,7 +52,7 @@ TEST(net_tcp_connector, connect_failed)
     io::event_loop     loop;
     // baidu, 808 is bad port
     auto connector = std::make_shared<net::tcp_connector>(
-        &loop, net::addr("x0000.0.x.0", 808));
+        &loop, net::addr(kBadAddr, kBadPort));
 
     connector->set_new_conn_handler(
         [&](int fd, const errors::error_code& error) {
