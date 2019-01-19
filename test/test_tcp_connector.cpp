@@ -4,7 +4,6 @@
 
 using namespace pp;
 
-
 TEST(net_tcp_connector, connect_success)
 {
     errors::error_code err;
@@ -46,12 +45,13 @@ TEST(net_tcp_connector, connect_failed)
     errors::error_code err;
     io::event_loop     loop;
     // baidu, 808 is bad port
-    auto connector =
-        std::make_shared<net::tcp_connector>(&loop, net::addr("0.0.0.0", 808));
+    auto connector = std::make_shared<net::tcp_connector>(
+        &loop, net::addr("x0000.0.x.0", 808));
 
     connector->set_new_conn_handler(
         [&](int fd, const errors::error_code& error) {
             EXPECT_NE(error.value(), 0);
+            std::string e = error.message();
             loop.quit();
         });
     connector->start_connect(0, err);
