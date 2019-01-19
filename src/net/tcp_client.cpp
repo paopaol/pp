@@ -35,8 +35,15 @@ namespace net {
     void tcp_client::dial(_time::Duration timeout)
     {
         loop_->run_in_loop([&]() {
-            errors::error_code error;
-            tcp_connector_->start_connect(timeout, error);
+            errors::error_code ec;
+            tcp_connector_->start_connect(timeout, ec);
+            if (ec) {
+                loop_->run_in_loop([&, ec]() {
+                    if (handle_connection_) {
+                        handle_connection_(nullptr, _time::now(), ec);
+                    }
+                });
+            }
         });
     }
 
@@ -61,6 +68,14 @@ namespace net {
 
     void tcp_client::conn_connected(int fd, const errors::error_code& error)
     {
+        // connecting failed
+        if (error) {
+            if (handle_connection_) {
+                handle_connection_(nullptr, _time::now(), error);
+            }
+            return;
+        }
+
         tcp_connector_->detach_loop();
         tcp_conn_ = std::make_shared<tcp_conn>(loop_, fd, error);
 
