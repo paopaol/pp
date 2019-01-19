@@ -31,9 +31,7 @@ bxel_task::bxel_task(io::event_loop* loop, bxel_task_id id, int concurrent_num,
       support_range_(false),
       state_(task_state::kNotStarted),
       recved_bytes_(0),
-      total_bytes_(0),
-      speed_(0),
-      per_(0)
+      total_bytes_(-1)
 {
 }
 
@@ -42,7 +40,7 @@ bxel_task::~bxel_task()
     assert(state_ == task_state::kDone);
 }
 
-void bxel_task::on_progress(const progress_handler& handler)
+void bxel_task::on_progress(const download_progress_handler& handler)
 {
     report_progress_ = handler;
 }
@@ -77,7 +75,7 @@ static size_t try_get_content_len(const net::http_response* resp)
     if (header != resp->headers.end()) {
         return atoi(header->second.c_str());
     }
-    return 0;
+    return -1;
 }
 
 static std::string try_get_etag(const net::http_response* resp)
@@ -101,7 +99,7 @@ static std::string try_get_last_modify(const net::http_response* resp)
 void bxel_task::handle_progress(const errors::error_code& error)
 {
     if (report_progress_) {
-        report_progress_(id_, per_, speed_, error);
+        report_progress_(id_, recved_bytes_, total_bytes_, error);
     }
 }
 
@@ -114,7 +112,6 @@ void bxel_task::task_done(const errors::error_code& error)
 
 static void use_new_filename(fs::path& path)
 {
-    int id;
     for (int id = 0; id < 100000; id++) {
         fs::path test_path;
         auto     ext      = path.extension();
@@ -159,22 +156,24 @@ static FILE* create_file_if_no_exit(fs::path& path, errors::error_code& error)
     return fp;
 }
 
-void bxel_task::write_file(net::http_response*       resp,
+void bxel_task::write_file(net::http_response* resp, bool finished,
                            const errors::error_code& error)
 {
-    if (resp->is_done()) {
-        if (error || last_err_) {
-            // download failed
-            last_err_ = last_err_ ? last_err_ : error;
-            task_done(last_err_);
-            return;
-        }
-        // download done success
-        fclose(file_);
-        per_ = 100;
+    if (error) {
         task_done(error);
         return;
     }
+    if (finished) {
+        if (file_) {
+            fclose(file_);
+        }
+        if (!last_err_) {
+            total_bytes_ = recved_bytes_;
+        }
+        task_done(last_err_);
+        return;
+    }
+
     int status_code = resp->status_code;
     if (status_code != 200) {
         make_net_error(last_err_, fmt::Sprintf("%d %s", status_code,
@@ -188,9 +187,6 @@ void bxel_task::write_file(net::http_response*       resp,
     resp->body = io::writer([&](const char* buf, size_t len) {
         fwrite(buf, 1, len, file_);
         recved_bytes_ += len;
-        if (total_bytes_) {
-            per_ = (recved_bytes_ / (total_bytes_ * 1.0)) * 100;
-        }
         return len;
     });
 }
@@ -203,7 +199,7 @@ void bxel_task::start_single_download()
 
     auto req = client_.new_request(
         url_, net::http_method::kGet,
-        std::bind(&bxel_task::write_file, shared_from_this(), _1, _2));
+        std::bind(&bxel_task::write_file, shared_from_this(), _1, _2, _3));
     sub_task.wreq_ = req;
     block_task_list_.push_back(sub_task);
     errors::error_code err;
@@ -224,24 +220,20 @@ void bxel_task::start_download()
     // start_mutiple_download();
 }
 
-// 1-connect failed--->done failed
-// 2-connect success
-//    1-status code bad---->done failed
-//    2- during download broken--->done
-//          1- cancel --> done  failed
-//          2- remote close --> done failed
-//    3- download done ---->done  success
-void bxel_task::find_range_content(net::http_response*       resp,
+void bxel_task::find_range_content(net::http_response* resp, bool finished,
                                    const errors::error_code& error)
 {
-    double per = total_bytes_ > 0 ? recved_bytes_ / (total_bytes_ * 1.0) : 0.0;
-    // the request complete
-    if (resp->is_done()) {
-        if (state_ != task_state::kDownloading) {
-            auto err = last_err_ ? last_err_ : error;
-            task_done(err);
+    if (error) {
+        task_done(error);
+        return;
+    }
+
+    if (finished) {
+        if (last_err_) {
+            task_done(last_err_);
             return;
         }
+        assert(state_ == task_state::kDownloading);
         start_download();
         return;
     }
@@ -256,7 +248,7 @@ void bxel_task::find_range_content(net::http_response*       resp,
 
     support_range_ = resp->status_code == 206 ? true : false;
     total_bytes_   = try_get_content_len(resp);
-    if (total_bytes_ == 0) {
+    if (total_bytes_ == -1) {
         support_range_ = false;
     }
     etag_          = try_get_etag(resp);
@@ -275,9 +267,9 @@ void bxel_task::start()
 
     errors::error_code err;
 
-    auto req = client_.new_request(
-        url_, net::http_method::kGet,
-        std::bind(&bxel_task::find_range_content, shared_from_this(), _1, _2));
+    auto req              = client_.new_request(url_, net::http_method::kGet,
+                                   std::bind(&bxel_task::find_range_content,
+                                             shared_from_this(), _1, _2, _3));
     req->headers["Range"] = "bytes=0-9";
     query_req_            = req;
     client_.run(req, err);
@@ -302,13 +294,13 @@ bxel::bxel(io::event_loop* loop, const std::string& name)
 
 bxel::~bxel() {}
 
-void bxel::task_progress(bxel_task_id id, int per, size_t speed,
-                         const errors::error_code& error)
+void bxel::task_progress(bxel_task_id id, size_t bytes_recved,
+                         size_t bytes_total, const errors::error_code& error)
 {
     if (report_progress_) {
-        report_progress_(id, per, speed, error);
+        report_progress_(id, bytes_recved, bytes_total, error);
     }
-    if (error || per == 100) {
+    if (error || bytes_recved == bytes_total) {
         remove_task(id);
     }
 }
@@ -320,7 +312,8 @@ void bxel::set_concurrent_task(int number)
     concurrent_tasks_ = number;
 }
 
-void bxel::set_progress_handler(const task_progress_handler& handler)
+void bxel::set_progress_handler(
+    const bxel_task::download_progress_handler& handler)
 {
     report_progress_ = handler;
 }
@@ -356,17 +349,18 @@ void bxel::remove_task_in_loop(bxel_task_id id)
 bxel_task_id bxel::add_task(const std::string& url, int concurrent_numbers,
                             const std::string& path)
 {
+    auto id = next_id_++;
     loop_->run_in_loop(std::bind(&bxel::add_task_in_loop, this, url,
-                                 concurrent_numbers, path));
-    return next_id_;
+                                 concurrent_numbers, path, id));
+    return id;
 }
 
 void bxel::add_task_in_loop(const std::string& url, int concurrent_numbers,
-                            const std::string& path)
+                            const std::string& path, bxel_task_id id)
 {
     assert(loop_->in_created_thread());
-    auto task = std::make_shared<bxel_task>(loop_, next_id_++,
-                                            concurrent_numbers, url, path);
+    auto task =
+        std::make_shared<bxel_task>(loop_, id, concurrent_numbers, url, path);
 
     task->on_progress(std::bind(&bxel::task_progress, this, _1, _2, _3, _4));
 
@@ -378,18 +372,20 @@ void bxel::add_task_in_loop(const std::string& url, int concurrent_numbers,
     task->start();
 }
 
-static void report_progress(bxel_task_id id, int per, size_t speed,
-                            const errors::error_code& error)
+static io::event_loop loop;
+
+static void report_progress(bxel_task_id id, size_t bytes_recved,
+                            size_t bytes_total, const errors::error_code& error)
 {
-    printf("task:%4d\tper:%5d%%\t%6zd bytes/second\t%s\n", id, per, speed,
-           error.message().c_str());
+    printf("task:%d\tbytes recved: %zd\tbytes total:%zd\t%s\n", id,
+           bytes_recved, bytes_total, error.message().c_str());
+    loop.quit();
 }
 
 // this is a single thread application
 int main(int argc, char* argv[])
 {
-    io::event_loop loop;
-    bxel           bxel_(&loop, "bxel is a http downloader");
+    bxel bxel_(&loop, "bxel is a http downloader");
 
     bxel_.set_concurrent_task(1);
     bxel_.set_progress_handler(std::bind(report_progress, _1, _2, _3, _4));
