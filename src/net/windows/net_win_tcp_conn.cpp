@@ -360,7 +360,8 @@ namespace net {
         assert(state == DisConnected);
         if (state == DisConnected) {
             if (connection_handler_) {
-                connection_handler_(shared_from_this(), _time::now(), error);
+                connection_handler_(shared_from_this(), _time::now(),
+                                    std::error_code());
             }
             errors::error_code err;
             evfd->remove_event(err);
