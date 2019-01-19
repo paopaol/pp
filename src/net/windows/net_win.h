@@ -10,7 +10,6 @@
 #define make_win_socket_error_code(error, fd)                  \
     error = hht_make_error_code(                               \
         static_cast<errors::error>(errors::error::NET_ERROR)); \
-    error.suffix_msg(errors::win_errstr(::WSAGetLastError())); \
-    closesocket(fd);
+    error.suffix_msg(errors::win_errstr(::WSAGetLastError())); 
 
 #endif
