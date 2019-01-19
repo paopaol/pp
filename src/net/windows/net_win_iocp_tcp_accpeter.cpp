@@ -99,6 +99,7 @@ namespace net {
 
         if (!SUCCEEDED_WITH_IOCP(ret, ecode)) {
             make_win_socket_error_code(error, accept_socket);
+			closesocket(accept_socket);
             return -1;
         }
         evfd->queued_pending_request(request);

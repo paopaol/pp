@@ -66,6 +66,7 @@ namespace net {
             WSAIoctl(fd, SIO_BASE_HANDLE, NULL, 0, &fd, sizeof fd, &bytes, NULL,
                      NULL);
             CancelIo(( HANDLE )fd);
+            ::SetLastError(WSAETIMEDOUT);
         });
         return 0;
     }
@@ -80,7 +81,10 @@ namespace net {
 
         assert(loop_->in_created_thread());
 
-        int fd   = new_nonblock_socket(AF_INET, SOCK_STREAM, error);
+        int fd = new_nonblock_socket(AF_INET, SOCK_STREAM, error);
+        if (error) {
+            return -1;
+        }
         conn_fd_ = std::make_shared<io::iocp_event_fd>(loop_, fd);
 
         auto evfd = static_cast<io::iocp_event_fd*>(conn_fd_.get());
@@ -93,6 +97,7 @@ namespace net {
         ecode = ::bind(evfd->fd(), ( const sockaddr* )&local, sizeof local);
         if (ecode != 0) {
             make_win_socket_error_code(error, evfd->fd());
+            closesocket(evfd->fd());
             return -1;
         }
         evfd->enable_connect(std::bind(&tcp_connector::connect_done, this),
@@ -104,6 +109,7 @@ namespace net {
                        0, &send, (LPOVERLAPPED) & (request->Overlapped));
         if (!SUCCEEDED_WITH_IOCP(ret, ecode)) {
             make_win_socket_error_code(error, evfd->fd());
+            closesocket(evfd->fd());
             return -1;
         }
 
@@ -136,7 +142,10 @@ namespace net {
         int ret =
             ::setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0);
         if (ret < 0) {
-            make_win_socket_error_code(error, fd);
+            error = hht_make_error_code(
+                static_cast<std::errc>(std::errc::connection_reset));
+            closesocket(fd);
+            fd = -1;
         }
         if (!new_conn_handler_) {
             closesocket(fd);
