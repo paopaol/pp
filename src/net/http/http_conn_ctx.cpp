@@ -117,10 +117,10 @@ namespace net {
             else {
                 if (!ctx->some_body_.empty()) {
                     ctx->resp_.body.write(ctx->some_body_.c_str(),
-                                          ctx->some_body_.size());
+                                          ctx->some_body_.size(), ctx->error_);
                     ctx->some_body_.clear();
                 }
-                ctx->resp_.body.write(at, length);
+                ctx->resp_.body.write(at, length, ctx->error_);
             }
             break;
         }

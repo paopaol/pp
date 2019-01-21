@@ -10,7 +10,7 @@ net::http_client                        client(&loop);
 static std::weak_ptr<net::http_request> wreq;
 static bool                             canceling = false;
 
-static size_t read_body(const char* data, size_t len)
+static size_t read_body(const char* data, size_t len, errors::error_code& error)
 {
     fwrite(data, 1, len, stdout);
 

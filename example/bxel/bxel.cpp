@@ -184,12 +184,16 @@ void bxel_task::write_file(net::http_response* resp, bool finished,
     if (last_err_) {
         return;
     }
-    resp->body = io::writer([&](const char* buf, size_t len) {
-        fwrite(buf, 1, len, file_);
-        recved_bytes_ += len;
-        return len;
-    });
+    resp->body =
+        io::writer([&](const char* buf, size_t len, errors::error_code& error) {
+            // error = hht_make_error_code(
+            //     static_cast<std::errc>(std::errc::no_space_on_device));
+            fwrite(buf, 1, len, file_);
+            recved_bytes_ += len;
+            return len;
+        });
 }
+
 void bxel_task::start_single_download()
 {
     block_task sub_task;

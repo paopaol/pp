@@ -11,8 +11,10 @@ namespace pp {
 namespace io {
     // read_func and write_func should never return error,
     // if there is no data for read or write,return 0(EOF)
-    typedef std::function<size_t(char* buf, size_t len)>       read_func;
-    typedef std::function<size_t(const char* buf, size_t len)> write_func;
+    typedef std::function<size_t(char* buf, size_t len)> read_func;
+    typedef std::function<size_t(const char* buf, size_t len,
+                                 errors::error_code& erroc)>
+        write_func;
 
     class reader {
     public:
@@ -42,13 +44,14 @@ namespace io {
         writer(){};
         ~writer(){};
 
-        size_t write(const char* buf, size_t len)
+        size_t write(const char* buf, size_t len, errors::error_code& error)
         {
             if (write_) {
-                return write_(buf, len);
+                return write_(buf, len, error);
             }
             return 0;
         }
+
         bool is_nil()
         {
             return write_ == nullptr;
