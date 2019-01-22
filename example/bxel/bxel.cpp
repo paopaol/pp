@@ -31,13 +31,17 @@ bxel_task::bxel_task(io::event_loop* loop, bxel_task_id id, int concurrent_num,
       support_range_(false),
       state_(task_state::kNotStarted),
       recved_bytes_(0),
-      total_bytes_(-1)
+      total_bytes_(-1),
+      file_(nullptr)
 {
 }
 
 bxel_task::~bxel_task()
 {
     assert(state_ == task_state::kDone);
+    if (file_) {
+        fclose(file_);
+    }
 }
 
 void bxel_task::on_progress(const download_progress_handler& handler)
@@ -164,10 +168,8 @@ void bxel_task::write_file(net::http_response* resp, bool finished,
         return;
     }
     if (finished) {
-        if (file_) {
-            fclose(file_);
-        }
         if (!last_err_) {
+            // success done
             total_bytes_ = recved_bytes_;
         }
         task_done(last_err_);
@@ -180,6 +182,7 @@ void bxel_task::write_file(net::http_response* resp, bool finished,
                                                resp->status_line.c_str()));
         return;
     }
+
     file_ = create_file_if_no_exit(path_, last_err_);
     if (last_err_) {
         return;
