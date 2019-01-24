@@ -39,9 +39,6 @@ bxel_task::bxel_task(io::event_loop* loop, bxel_task_id id, int concurrent_num,
 bxel_task::~bxel_task()
 {
     assert(state_ == task_state::kDone);
-    if (file_) {
-        fclose(file_);
-    }
 }
 
 void bxel_task::on_progress(const download_progress_handler& handler)
@@ -138,7 +135,8 @@ static void use_new_filename(fs::path& path)
     }
 }
 
-static FILE* create_file_if_no_exit(fs::path& path, errors::error_code& error)
+static std::shared_ptr<FILE> create_file_if_no_exit(fs::path&           path,
+                                                    errors::error_code& error)
 {
     if (path.has_parent_path()) {
         auto parent = path.parent_path();
@@ -157,7 +155,8 @@ static FILE* create_file_if_no_exit(fs::path& path, errors::error_code& error)
         error.prefix_msg(path.string());
         return nullptr;
     }
-    return fp;
+    std::shared_ptr<FILE> f(fp, fclose);
+    return f;
 }
 
 void bxel_task::write_file(net::http_response* resp, bool finished,
@@ -191,7 +190,7 @@ void bxel_task::write_file(net::http_response* resp, bool finished,
         io::writer([&](const char* buf, size_t len, errors::error_code& error) {
             // error = hht_make_error_code(
             //     static_cast<std::errc>(std::errc::no_space_on_device));
-            fwrite(buf, 1, len, file_);
+            fwrite(buf, 1, len, file_.get());
             recved_bytes_ += len;
             return len;
         });

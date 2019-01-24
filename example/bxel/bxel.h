@@ -93,7 +93,7 @@ private:
     size_t                    recved_bytes_;
     size_t                    total_bytes_;
     errors::error_code        last_err_;
-    FILE*                     file_;
+    std::shared_ptr<FILE>     file_;
 };
 
 class bxel {
