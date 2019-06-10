@@ -52,6 +52,10 @@ set(io-src-list
   src/io/io_event_fd.cpp
   )
 
+####signals slots
+set(signal-slot-src-list
+  )
+
 
 if(IS_WIN)
   set(io-src-list
@@ -146,6 +150,7 @@ endif()
 add_library(pp
   ${strings-src-list}
   ${io-src-list}
+  ${signal-slot-src-list}
   ${net-src-list}
   ${fmt-src-list}
   ${system-src-list}

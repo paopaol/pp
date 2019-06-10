@@ -2,6 +2,7 @@
 #include <net/net_tcp_client.h>
 
 #include <functional>
+#include <object/signals.h>
 
 using namespace std::tr1::placeholders;
 

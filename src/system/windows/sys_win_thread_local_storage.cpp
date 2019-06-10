@@ -50,5 +50,11 @@ namespace pp {
             }
             return true;
         }
+		event_loop *current_thread_loop()
+		{
+			event_loop *loop = nullptr;
+			loop = static_cast<event_loop*>(TlsGetValue(index));
+			return loop;
+		}
     }
 }

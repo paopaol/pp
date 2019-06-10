@@ -38,6 +38,7 @@ namespace io {
         void update_event_fd(event_fd* event, errors::error_code& error);
         void remove_event_fd(event_fd* event, errors::error_code& error);
         _time::timer_queue_ref get_timer_queue();
+		static event_loop *current_thread_loop();
 
     private:
         // we will call _time::timer private functions
