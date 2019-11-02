@@ -104,8 +104,7 @@ if(IS_WIN)
     src/system/windows/sys_win_mutex.cpp
     src/system/windows/sys_win_thread_call_once.cpp
     src/system/windows/sys_win_thread.cpp
-    # src/system/windows/sys_win_thread_local_storage.cpp
-  src/system/sys_thread_local.cpp
+    src/system/sys_thread_local.cpp
     )
 endif()
 
