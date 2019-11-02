@@ -5,5 +5,5 @@
 #include <Windows.h>
 #include <stdint.h>
 
-extern void gettimeofday(struct timeval* tp, void* unused);
+extern void gettimeofday(struct timeval *tp, void *unused);
 #endif

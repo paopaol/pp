@@ -2,13 +2,10 @@
 
 #include <Windows.h>
 
-namespace pp{
-    namespace system{
-        namespace this_thread{
-            thread_id get_id()
-            {
-				return ::GetCurrentThreadId();
-            }
-        }
-    }
-}
+namespace pp {
+namespace system {
+namespace this_thread {
+thread_id get_id() { return ::GetCurrentThreadId(); }
+} // namespace this_thread
+} // namespace system
+} // namespace pp

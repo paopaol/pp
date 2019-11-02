@@ -13,7 +13,7 @@ public:
   void clickButton(int value) { valueChanged.emit(value); }
 };
 
-class MyLabel :public object{
+class MyLabel : public object {
 public:
   MyLabel(object *parent = nullptr) : object(parent) {}
   void setValue(int value) { printf("value is %d\n", value); }

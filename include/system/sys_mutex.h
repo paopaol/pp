@@ -3,56 +3,55 @@
 
 #include <functional>
 
-namespace pp{
-	namespace system{
-		class MutexPrivate;
-		class  Mutex{
-		public:
-			Mutex();
-			~Mutex();
-			void lock();
+namespace pp {
+namespace system {
+class MutexPrivate;
+class Mutex {
+public:
+  Mutex();
+  ~Mutex();
+  void lock();
 
-			void unlock();
+  void unlock();
 
-			void *getMutex();
+  void *getMutex();
 
-		private:
-			Mutex(const Mutex &);
-			const Mutex& operator = (const Mutex &);
+private:
+  Mutex(const Mutex &);
+  const Mutex &operator=(const Mutex &);
 
-			MutexPrivate			*priv_;
-		};
+  MutexPrivate *priv_;
+};
 
+class MutexLockGuard {
+public:
+  explicit MutexLockGuard(Mutex &mutex);
+  ~MutexLockGuard();
 
-		class  MutexLockGuard{
-		public:
-			explicit MutexLockGuard(Mutex &mutex);
-			~MutexLockGuard();
+private:
+  MutexLockGuard(const MutexLockGuard &);
+  const MutexLockGuard &operator=(const MutexLockGuard &);
 
-		private:
-			MutexLockGuard(const MutexLockGuard &);
-			const MutexLockGuard &  operator = (const MutexLockGuard &);
+private:
+  Mutex &mutex_;
+};
 
-		private:
-			Mutex   &mutex_;
-		};
+typedef std::tr1::function<void()> call_once_routine;
+class once_flag_private;
+class once_flag {
+public:
+  once_flag();
+  ~once_flag();
 
-		typedef std::tr1::function<void ()> call_once_routine;
-		class once_flag_private;
-		class once_flag{
-		public:
-			once_flag();
-			~once_flag();
+  friend void call_once(once_flag &flag, const call_once_routine &routine);
 
-			friend void call_once(once_flag &flag, const call_once_routine &routine);
-		private:
-			once_flag_private *priv_;
-		};
+private:
+  once_flag_private *priv_;
+};
 
-		
-		void call_once(once_flag &flag, const call_once_routine &routine);
-	}
-}
+void call_once(once_flag &flag, const call_once_routine &routine);
+} // namespace system
+} // namespace pp
 //#define MutexLockGuard(x) error "Missing guard object name"
 
 #endif

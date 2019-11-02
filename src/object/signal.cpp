@@ -2,12 +2,6 @@
 
 namespace pp {
 
+template <typename... args_type> void signal::emit(args_type...) {}
 
-
-template<typename ... args_type>
-void signal::emit(args_type...)
-{
-	
-}
-
-}
+} // namespace pp

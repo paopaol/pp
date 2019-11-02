@@ -1,9 +1,9 @@
 
 using namespace std;
 
-namespace pp{
-    namespace io{
-        //const errors::Error Eof = errors::Error("EOF"); 
-        int a = 0;
-    }
-}
+namespace pp {
+namespace io {
+// const errors::Error Eof = errors::Error("EOF");
+int a = 0;
+} // namespace io
+} // namespace pp

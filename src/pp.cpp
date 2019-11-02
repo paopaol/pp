@@ -1,6 +1,3 @@
 #include <hht.h>
 
-int unused()
-{
-  return 0;
-}
+int unused() { return 0; }

@@ -10,126 +10,112 @@
 #define NOTFOUND_FROM(map) map.end()
 namespace pp {
 namespace io {
-    static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
-                                        errors::error_code& error);
-   static HANDLE iocp_create();
-   static void iocp_close(HANDLE h);
+static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
+                                    errors::error_code &error);
+static HANDLE iocp_create();
+static void iocp_close(HANDLE h);
 
-    iocp_poller::iocp_poller() : m_iocp(NULL)
-    {
-        m_iocp = iocp_create();
-        assert(m_iocp != NULL);
-        // FIXME: add log
-    }
+iocp_poller::iocp_poller() : m_iocp(NULL) {
+  m_iocp = iocp_create();
+  assert(m_iocp != NULL);
+  // FIXME: add log
+}
 
-    iocp_poller::~iocp_poller()
-    {
-        assert(m_iocp != NULL);
-        iocp_close(m_iocp);
-        // fixme: add log
-    }
+iocp_poller::~iocp_poller() {
+  assert(m_iocp != NULL);
+  iocp_close(m_iocp);
+  // fixme: add log
+}
 
-    void iocp_poller::update_event_fd(event_fd*           _event,
-                                      errors::error_code& error)
-    {
-        iocp_event_fd* event = static_cast<iocp_event_fd*>(_event);
+void iocp_poller::update_event_fd(event_fd *_event, errors::error_code &error) {
+  iocp_event_fd *event = static_cast<iocp_event_fd *>(_event);
 
-        // if not found the event fd, we will create it
-        auto it = events_map.find(event->fd());
-        if (it == NOTFOUND_FROM(events_map)) {
-            iocp_associate_handle(reinterpret_cast<HANDLE>(event->fd()), m_iocp,
-                                  NULL, error);
-            // we ignore error of iocp_associate_handle,because if tcp_connector
-            // had associate the handle to iocp,after connected, the handle will
-            // used to create tcp_conn, and the tcp_conn will associate the
-            // handle too, if an handle already associated to iocp, it will
-            // return fail.
-            events_map[event->fd()] = event;
-            error.clear();
-        }
+  // if not found the event fd, we will create it
+  auto it = events_map.find(event->fd());
+  if (it == NOTFOUND_FROM(events_map)) {
+    iocp_associate_handle(reinterpret_cast<HANDLE>(event->fd()), m_iocp, NULL,
+                          error);
+    // we ignore error of iocp_associate_handle,because if tcp_connector
+    // had associate the handle to iocp,after connected, the handle will
+    // used to create tcp_conn, and the tcp_conn will associate the
+    // handle too, if an handle already associated to iocp, it will
+    // return fail.
+    events_map[event->fd()] = event;
+    error.clear();
+  }
 
-        return;
-    }
+  return;
+}
 
-    void iocp_poller::remove_event_fd(event_fd*           event,
-                                      errors::error_code& error)
-    {
-        iocp_event_fd* ev = static_cast<iocp_event_fd*>(event);
+void iocp_poller::remove_event_fd(event_fd *event, errors::error_code &error) {
+  iocp_event_fd *ev = static_cast<iocp_event_fd *>(event);
 
-        auto it = events_map.find(ev->fd());
-        if (it != NOTFOUND_FROM(events_map)) {
-            events_map.erase(it);
-        }
-    }
+  auto it = events_map.find(ev->fd());
+  if (it != NOTFOUND_FROM(events_map)) {
+    events_map.erase(it);
+  }
+}
 
-    void iocp_poller::wakeup()
-    {
-        assert(m_iocp);
+void iocp_poller::wakeup() {
+  assert(m_iocp);
 
-        ::PostQueuedCompletionStatus(m_iocp, 0, ( ULONG_PTR )m_iocp, NULL);
-    }
+  ::PostQueuedCompletionStatus(m_iocp, 0, (ULONG_PTR)m_iocp, NULL);
+}
 
-    int iocp_poller::poll(int timeoutms, event_fd_list& active_event_list,
-                          errors::error_code& error)
-    {
-        assert(m_iocp);
+int iocp_poller::poll(int timeoutms, event_fd_list &active_event_list,
+                      errors::error_code &error) {
+  assert(m_iocp);
 
-        DWORD           iosize     = 0;
-        LPWSAOVERLAPPED overlapped = NULL;
-        io_request_t*   active_req = NULL;
-        int             ecode      = 0;
-        ULONG_PTR       unused_key = NULL;
+  DWORD iosize = 0;
+  LPWSAOVERLAPPED overlapped = NULL;
+  io_request_t *active_req = NULL;
+  int ecode = 0;
+  ULONG_PTR unused_key = NULL;
 
-        BOOL success = ::GetQueuedCompletionStatus(m_iocp, &iosize, &unused_key,
-                                                   ( LPOVERLAPPED* )&overlapped,
-                                                   timeoutms);
-        // wakeup event,do nothing, just return
-        if (unused_key == ( ULONG_PTR )m_iocp) {
-            return 0;
-        }
+  BOOL success = ::GetQueuedCompletionStatus(
+      m_iocp, &iosize, &unused_key, (LPOVERLAPPED *)&overlapped, timeoutms);
+  // wakeup event,do nothing, just return
+  if (unused_key == (ULONG_PTR)m_iocp) {
+    return 0;
+  }
 
-        // maybe timeout occured
-        if (!overlapped) {
-            return 0;
-        }
+  // maybe timeout occured
+  if (!overlapped) {
+    return 0;
+  }
 
-        if (!overlapped && (ecode = ::GetLastError()) != WAIT_TIMEOUT) {
-            error = hht_make_error_code(static_cast<std::errc>(ecode));
-            return -1;
-        }
+  if (!overlapped && (ecode = ::GetLastError()) != WAIT_TIMEOUT) {
+    error = hht_make_error_code(static_cast<std::errc>(ecode));
+    return -1;
+  }
 
-        active_req = CONTAINING_RECORD(overlapped, io_request_t, Overlapped);
+  active_req = CONTAINING_RECORD(overlapped, io_request_t, Overlapped);
 
-        iocp_event_fd* event_fd =
-            static_cast<iocp_event_fd*>(events_map[active_req->io_fd]);
-        assert(event_fd);
-        assert(event_fd->fd() == active_req->io_fd);
-        active_req->io_size = iosize;
-        event_fd->set_active_pending(active_req);
+  iocp_event_fd *event_fd =
+      static_cast<iocp_event_fd *>(events_map[active_req->io_fd]);
+  assert(event_fd);
+  assert(event_fd->fd() == active_req->io_fd);
+  active_req->io_size = iosize;
+  event_fd->set_active_pending(active_req);
 
-        event_fd->handle_event();
-        return 0;
-    }
+  event_fd->handle_event();
+  return 0;
+}
 
-    static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
-                                        errors::error_code& error)
-    {
-        auto hiocp = CreateIoCompletionPort(h, iocp, ptr, 0);
-        if (hiocp == NULL) {
-            int last_error = ::GetLastError();
-            error = hht_make_error_code(static_cast<std::errc>(last_error));
-            return NULL;
-        }
-        return hiocp;
-    }
-    static void iocp_close(HANDLE h)
-    {
-      ::CloseHandle(h);
-    }
+static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
+                                    errors::error_code &error) {
+  auto hiocp = CreateIoCompletionPort(h, iocp, ptr, 0);
+  if (hiocp == NULL) {
+    int last_error = ::GetLastError();
+    error = hht_make_error_code(static_cast<std::errc>(last_error));
+    return NULL;
+  }
+  return hiocp;
+}
+static void iocp_close(HANDLE h) { ::CloseHandle(h); }
 
-    static HANDLE iocp_create()
-    {
-        return CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
-    }
-}  // namespace io
-}  // namespace pp
+static HANDLE iocp_create() {
+  return CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
+}
+} // namespace io
+} // namespace pp

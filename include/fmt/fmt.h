@@ -3,13 +3,13 @@
 
 #include <string>
 
-namespace pp{
+namespace pp {
 
-    namespace fmt {
-        std::string Sprintf(const char *format, ...);
-        int Printf(const char *format, ...);
-        int Println(const char *format, ...);
-    }
-}
+namespace fmt {
+std::string Sprintf(const char *format, ...);
+int Printf(const char *format, ...);
+int Println(const char *format, ...);
+} // namespace fmt
+} // namespace pp
 
 #endif

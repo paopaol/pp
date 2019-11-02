@@ -9,79 +9,79 @@
 
 namespace pp {
 namespace bytes {
-    class Buffer;
-    typedef std::shared_ptr<Buffer> BufferRef;
+class Buffer;
+typedef std::shared_ptr<Buffer> BufferRef;
 
-    class Buffer {
-    public:
-        Buffer();
-        ~Buffer() {}
+class Buffer {
+public:
+  Buffer();
+  ~Buffer() {}
 
-        // Read All
-        size_t Read(std::vector<char>& p);
+  // Read All
+  size_t Read(std::vector<char> &p);
 
-        // Read One Byte
-        char ReadByte();
+  // Read One Byte
+  char ReadByte();
 
-        // Read N Bytes from buffer
-        size_t ReadBytes(std::vector<char>& p, size_t n);
+  // Read N Bytes from buffer
+  size_t ReadBytes(std::vector<char> &p, size_t n);
 
-        size_t Read(char* buffer, size_t n);
-		size_t ZeroCopyRead(char *&ptr, size_t n);
+  size_t Read(char *buffer, size_t n);
+  size_t ZeroCopyRead(char *&ptr, size_t n);
 
-        // write data into buffer
-        size_t Write(const char* d, size_t len);
+  // write data into buffer
+  size_t Write(const char *d, size_t len);
 
-        size_t Write(const std::string& s);
+  size_t Write(const std::string &s);
 
-        size_t Write(const std::vector<char>& p);
+  size_t Write(const std::vector<char> &p);
 
-        void UnReadByte(/*error*/);
+  void UnReadByte(/*error*/);
 
-        void UnReadBytes(size_t n /*,error &e*/);
+  void UnReadBytes(size_t n /*,error &e*/);
 
-        // return unreaded data size
-        size_t Len();
+  // return unreaded data size
+  size_t Len();
 
-        size_t Cap();
+  size_t Cap();
 
-        void Reset();
+  void Reset();
 
-        bool PeekAt(std::vector<char>& p, size_t index, size_t size);
+  bool PeekAt(std::vector<char> &p, size_t index, size_t size);
 
-        void Optimization();
+  void Optimization();
 
-        // ReadFrom
-        // WriteTo
+  // ReadFrom
+  // WriteTo
 
-    private:
-        void growSpace(size_t len);
+private:
+  void growSpace(size_t len);
 
-        size_t leftSpace();
+  size_t leftSpace();
 
-        void hasWritten(size_t len);
+  void hasWritten(size_t len);
 
-        void hasReaded(size_t len);
+  void hasReaded(size_t len);
 
-        char* beginWrite();
+  char *beginWrite();
 
-        const char* beginWrite() const;
+  const char *beginWrite() const;
 
-        char* lastRead();
+  char *lastRead();
 
-        const char* beginRead() const;
+  const char *beginRead() const;
 
-        char* begin();
+  char *begin();
 
-        const char* begin() const;
+  const char *begin() const;
 
-        std::vector<char> b;
-        size_t            ridx;
-        size_t            widx;
-    };
+  std::vector<char> b;
+  size_t ridx;
+  size_t widx;
+};
 
-}  // namespace bytes
-}  // namespace pp
+} // namespace bytes
+} // namespace pp
 
 #endif
 

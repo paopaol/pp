@@ -4,9 +4,9 @@
 #include <string>
 
 namespace pp {
-	namespace errors {
-		extern std::string win_errstr(int code);
-	}
+namespace errors {
+extern std::string win_errstr(int code);
 }
+} // namespace pp
 
 #endif
