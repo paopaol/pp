@@ -14,7 +14,6 @@
 #endif
 #include <windows/io_win_iocp_poller.h>
 #endif
-#include <system/sys_thread.h>
 #include <system/sys_thread_local.h>
 
 #include <assert.h>
@@ -27,7 +26,7 @@ namespace pp {
 namespace io {
 
 event_loop::event_loop()
-    : tid_(system::this_thread::get_id()), execing_(false),
+    : tid_(std::this_thread::get_id()), execing_(false),
       event_poller_(new event_poller), exit_(false),
       timer_queue_(std::make_shared<_time::timer_queue>()) {
 #ifdef WIN32
@@ -58,7 +57,7 @@ event_loop::event_loop()
 event_loop::~event_loop() { system::clear_current_thread_loop(); }
 
 bool event_loop::in_created_thread() {
-  return tid_ == system::this_thread::get_id();
+  return tid_ == std::this_thread::get_id();
 }
 
 void event_loop::exec() {
@@ -70,7 +69,7 @@ void event_loop::exec() {
   while (!exit_) {
     // first, run pending functions
     {
-      system::MutexLockGuard _(func_list_mutex_);
+      std::unique_lock<std::mutex> _(func_list_mutex_);
       tmp_func_list_ = func_list_;
       func_list_.clear();
     }
@@ -104,7 +103,7 @@ void event_loop::run_in_loop(const Functor &func) {
 
 void event_loop::move_to_loop_thread(const Functor &func) {
   {
-    system::MutexLockGuard _(func_list_mutex_);
+    std::unique_lock<std::mutex> _(func_list_mutex_);
     func_list_.push_back(func);
   }
 

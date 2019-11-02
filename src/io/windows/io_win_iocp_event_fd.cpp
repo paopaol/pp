@@ -7,7 +7,6 @@
 
 #include <memory>
 #include <net/net.h>
-#include <system/sys_mutex.h>
 
 using namespace std;
 

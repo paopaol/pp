@@ -1,25 +1,25 @@
 #ifndef SYNC_PRORITY_QUEUE_H
 #define SYNC_PRORITY_QUEUE_H
 
+#include <condition_variable>
+#include <mutex>
 #include <queue>
-#include <system/sys_condition.h>
 
 namespace pp {
 namespace sync {
 
-template <typename T, typename CMP_TYPE> class PriorityQueue {
+template <typename T, typename CMP_TYPE> class priority_queue {
 public:
-  PriorityQueue(int maxSize)
-      : m_max(maxSize), m_full(m_mutex), m_empty(m_mutex), m_close(false) {}
+  priority_queue(int maxSize) : m_max(maxSize), m_close(false) {}
 
   int size() {
     system::MutexLockGuard lock(m_mutex);
     return m_queue.size();
   }
   bool poptop(T &t) {
-    system::MutexLockGuard lock(m_mutex);
+    std::unique_lock<std::mutex> lock(m_mutex);
     while (!m_close && m_queue.empty()) {
-      m_empty.wait();
+      m_empty.wait(lock);
     }
     if (m_close && m_queue.empty()) {
       return false;
@@ -30,16 +30,16 @@ public:
     return true;
   }
   void close() {
-    system::MutexLockGuard lock(m_mutex);
+    std::unique_lock<std::mutex> lock(m_mutex);
     m_close = true;
     m_empty.notify_all();
     m_full.notify_all();
   }
 
   bool push(T t) {
-    system::MutexLockGuard lock(m_mutex);
+    std::unique_lock<std::mutex> lock(m_mutex);
     while (!m_close && m_queue.size() == m_max) {
-      m_full.wait();
+      m_full.wait(lock);
     }
     if (m_close) {
       return false;
@@ -50,9 +50,9 @@ public:
   }
 
 private:
-  system::Mutex m_mutex;
-  system::Condition m_empty;
-  system::Condition m_full;
+  std::mutex m_mutex;
+  std::condition_variable m_empty;
+  std::condition_variable m_full;
   int m_max;
   bool m_close;
   std::priority_queue<T, std::vector<T>, CMP_TYPE> m_queue;

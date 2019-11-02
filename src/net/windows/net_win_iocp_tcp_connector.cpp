@@ -24,7 +24,7 @@ public:
     GUID connect_ex_guid = WSAID_CONNECTEX;
     int ret = 0;
 
-    system::call_once(flag, [&] {
+    std::call_once(flag, [&] {
       ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &connect_ex_guid,
                      sizeof(connect_ex_guid), &connect_ex, sizeof(connect_ex),
                      &bytes, 0, 0);
@@ -34,7 +34,7 @@ public:
   }
 
 private:
-  system::once_flag flag;
+  std::once_flag flag;
 };
 
 tcp_connector::tcp_connector(io::event_loop *loop, const addr &addr)

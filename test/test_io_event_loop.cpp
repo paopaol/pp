@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
 #include <io/io_event_loop.h>
 #include <sync/sync_chan.h>
-#include <system/sys_thread.h>
 #include <thread>
 
 using namespace pp;
@@ -22,7 +21,7 @@ TEST_F(test_io_event_loop, test_run_in_loop_construct_thread) {
 }
 
 TEST_F(test_io_event_loop, test_run_in_loop_other_thread) {
-  sync::Chan<bool> chan;
+  sync::chan<bool> chan;
 
   std::thread other_thread([&]() {
     // 3 seconds after, run start run this thread function

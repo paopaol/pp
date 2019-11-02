@@ -3,8 +3,8 @@
 
 #include <hht.h>
 
-#include <system/sys_mutex.h>
-#include <system/sys_thread.h>
+#include <mutex>
+#include <thread>
 #include <time/_time.h>
 #include <vector>
 
@@ -49,7 +49,7 @@ private:
 
   DISABLE_COPY_CONSTRCT(event_loop);
 
-  system::thread_id tid_;
+  std::thread::id tid_;
   bool execing_;
   bool exit_;
   std::shared_ptr<event_poller> event_poller_;
@@ -57,7 +57,7 @@ private:
   event_fd_list active_ev_fd_list_;
   _time::timer_queue_ref timer_queue_;
   std::vector<Functor> func_list_;
-  system::Mutex func_list_mutex_;
+  std::mutex func_list_mutex_;
 };
 } // namespace io
 } // namespace pp

@@ -98,15 +98,9 @@ if(IS_WIN)
 endif()
 
 ###system
-if(IS_WIN)
-  set(system-src-list
-    src/system/windows/sys_win_condition.cpp
-    src/system/windows/sys_win_mutex.cpp
-    src/system/windows/sys_win_thread_call_once.cpp
-    src/system/windows/sys_win_thread.cpp
-    src/system/sys_thread_local.cpp
-    )
-endif()
+set(system-src-list
+  src/system/sys_thread_local.cpp
+  )
 
 
 

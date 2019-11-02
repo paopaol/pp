@@ -21,7 +21,7 @@ public:
     int ret = 0;
     DWORD bytes = 0;
     GUID acceptex_guid = WSAID_ACCEPTEX;
-    system::call_once(flag, [&] {
+    std::call_once(flag, [&] {
       ret = WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER, &acceptex_guid,
                      sizeof(acceptex_guid), &accpet_ex, sizeof(accpet_ex),
                      &bytes, NULL, NULL);
@@ -30,7 +30,7 @@ public:
   }
 
 private:
-  system::once_flag flag;
+  std::once_flag flag;
 };
 
 win_iocp_tcp_accpeter::win_iocp_tcp_accpeter(io::event_loop *loop)
