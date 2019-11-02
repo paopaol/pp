@@ -10,5 +10,5 @@ target_link_libraries(http_client pp)
 add_executable(bxel bxel/bxel.cpp bxel/bxel.h)
 target_link_libraries(bxel pp)
 
-add_executable(signal_slot signal_slot.cpp)
-target_link_libraries(signal_slot pp)
+#add_executable(signal_slot signal_slot.cpp)
+#target_link_libraries(signal_slot pp)

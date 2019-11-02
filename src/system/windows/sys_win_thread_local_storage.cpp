@@ -5,56 +5,18 @@
 #include <Windows.h>
 
 #include <assert.h>
-//#include <atomic>
+#include <thread>
 
 using namespace std;
 
-static DWORD index = TLS_OUT_OF_INDEXES;
-
-void thread_local_storage_init()
-{
-    //static atomic_bool inited = false;
-    static bool inited = false;
-
-    if (inited) {
-        return;
-    }
-    inited = true;
-    index = TlsAlloc();
-    assert(index != TLS_OUT_OF_INDEXES);
-    inited = true;
-}
-
-void loopPushToThread(void *loop)
-{
-    TlsSetValue(index, loop);
-}
-
-void loopPopFromThread()
-{
-    TlsSetValue(index, 0);
-}
-
-void *loop_curren_thread_loop()
-{
-	return TlsGetValue(index);
-}
-
+void *loop_curren_thread_loop() { return TlsGetValue(index); }
 
 namespace pp {
-    namespace io {
-        bool event_loop::thread_already_has_loop()
-        {
-            if (TlsGetValue(index) == 0) {
-                return false;
-            }
-            return true;
-        }
-		event_loop *current_thread_loop()
-		{
-			event_loop *loop = nullptr;
-			loop = static_cast<event_loop*>(TlsGetValue(index));
-			return loop;
-		}
-    }
-}
+namespace io {
+static thread_local event_loop *g_loop = nullptr;
+void set_current_thread_loop(event_loop *loop) { g_loop = loop; }
+void clear_current_thread_loop() { g_loop = nullptr; }
+bool thread_already_has_loop() { return g_loop != nullptr; }
+event_loop *current_thread_loop() { return g_loop; }
+} // namespace io
+} // namespace pp

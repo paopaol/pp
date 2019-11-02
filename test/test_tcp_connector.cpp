@@ -7,7 +7,7 @@ using namespace pp;
 const static int kBadPort = 808;
 const static int kPort    = 80;
 
-const static char* kAddr    = "220.181.112.244";
+const static char* kGoodAddr    = "220.181.112.244";
 const static char* kBadAddr = "xxxx.xxxx.xxx.111";
 
 TEST(net_tcp_connector, connect_success)
@@ -16,7 +16,7 @@ TEST(net_tcp_connector, connect_success)
     io::event_loop     loop;
     // baidu
     auto connector =
-        std::make_shared<net::tcp_connector>(&loop, net::addr(kAddr, kPort));
+        std::make_shared<net::tcp_connector>(&loop, net::addr(kGoodAddr, kPort));
 
     connector->set_new_conn_handler(
         [&](int fd, const errors::error_code& error) {
@@ -34,7 +34,7 @@ TEST(net_tcp_connector, connect_timeout)
     io::event_loop     loop;
     // baidu, 808 is bad port
     auto connector =
-        std::make_shared<net::tcp_connector>(&loop, net::addr(kAddr, kBadPort));
+        std::make_shared<net::tcp_connector>(&loop, net::addr(kGoodAddr, kBadPort));
 
     connector->set_new_conn_handler(
         [&](int fd, const errors::error_code& error) {

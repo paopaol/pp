@@ -1,121 +1,106 @@
-#ifndef SIGNALS_H
-#define SIGNALS_H
+#ifndef __SIGNAL_H_
+#define __SIGNAL_H_
 
-#include <system/sys_thread.h>
+#include <cassert>
+#include <cstddef>
+#include <functional>
 #include <io/io_event_loop.h>
+#include <list>
 #include <mutex>
+#include <thread>
+#include <type_traits>
 
-namespace pp {
-
-//---------------------------------------------------------------------
-// bind_member
-//---------------------------------------------------------------------
-template <class Return, class Type, class... Args>
-std::function<Return(Args...)> bind_member(Type* instance,
-                                           Return (Type::*method)(Args...))
-{
-    /* 匿名函数 */
-    return [=](Args&&... args) -> Return {
-        /* 完美转发：能过将参数按原来的类型转发到另一个函数中 */
-        /* 通过完美转发将参数传递给被调用的函数 */
-        return (instance->*method)(std::forward<Args>(args)...);
-    };
+template <typename Type, typename... Args>
+static inline std::function<void(Args...)>
+createFunctor(Type *instance, void (Type::*method)(Args... args)) {
+  return [=](Args &&... args) { (instance->*method)(args...); };
 }
 
+template <typename func_type> class signal;
 class object {
 public:
-	template<class func_type>
-	class signal;
-	template<class func_type>
-	class slot {
-	public:
-		explicit slot(const std::function<func_type> &functor):functor_(functor) {}
+  enum class ConnectionType { kAuto };
+  explicit object(object *parent = nullptr)
+      : parent_(parent), threadId_(std::this_thread::get_id()) {}
 
-	private:
-		void set_connected_signal(signal<func_type> *_signal) {
-			signal_ = _signal;
-		
-		}
-		void set_slot_instace(object *instance)
-		{
-			revicer_ = instance;
-		}
+  std::thread::id threadId() { return threadId_; }
 
-		signal<func_type> *signal_;
-		object*            revicer_;
-		std::function<func_type> functor_;
+  template <typename SenderType, typename func_type, typename ReciverType,
+            typename... Args>
+  static inline bool connect(SenderType *sender, signal<func_type> &sig,
+                             ReciverType *reciver,
+                             void (ReciverType::*method)(Args... args),
+                             ConnectionType type = ConnectionType::kAuto) {
+    static_assert(std::is_base_of<object, SenderType>::value, "invalid type");
+    static_assert(std::is_base_of<object, ReciverType>::value, "invalid type");
+    assert((sender->threadId() == sig.threadId()) &&
+           "sender and signal must be below the same thread!");
+    auto _slot = createFunctor(reciver, method);
+    sig.appendSlot(type, nullptr, _slot);
+    return true;
+  }
 
-		friend class object;
-	};
-
-	template<class func_type>
-	class signal {
-	public:
-		signal() {}
-
-	private:
-		void set_connected_slot(const slot<func_type> &_slot) {
-			slots_.push_back(_slot);
-		}
-		std::vector<slot<func_type>> slots_;
-
-		friend class object;
-	};
-
-
-
-
-	template<class func_type>
-	static bool connect(object *sender, signal<func_type> &_signal,
-		object *reciver,
-		 slot<func_type> &_slot)
-	{
-		_signal.set_connected_slot(_slot);
-		_slot.set_slot_instace(reciver);
-		_slot.set_connected_signal(&_signal);
-		return true;
-	}
-
-
-	
-
-	template<class func_type>
-	static bool connect(object *sender, signal<func_type> &_signal,
-		const func_type &slot_func)
-	{
-		slot<func_type> _slot(slot_func);
-		connect(sender, _signal, nullptr, _slot);
-		return true;
-	}
-
-	template<class func_type>
-	static bool connect(object *sender, signal<func_type> &_signal,
-		const std::function<func_type> &slot_func)
-	{
-		//slot<func_type> _slot(slot_func);
-		connect(sender, _signal, nullptr, slot_func);
-		return true;
-	}
-
-	template<class class_type, class func_type, typename ... args_type>
-	static bool connect(object *sender, signal<func_type> &_signal,
-		class_type *reciver, void (class_type::*member_functor)(args_type...))
-	{
-		bind_member(reciver, member_functor);
-		 connect(sender, _signal, 
-			reciver, bind_member(reciver, member_functor));
-		return  true;
-	}
-
-	template<class func_type, typename ... args_type>
-	void emit(const signal<func_type> &_signal, args_type...args)
-	{
-		for (auto _slot : _signal.slots_) {
-			_slot.functor_(args...);
-		}
-	}
-
+private:
+  object *parent_;
+  std::thread::id threadId_;
+  pp::io::event_loop *loop_;
 };
 
-}  // namespace pp
-#endif /* SIGNALS_H */
+template <typename func_type> class slot {
+public:
+  using Functor = std::function<func_type>;
+  slot(const Functor &functor) : functor_(functor) {}
+  template <typename... Args> void run(Args... args) {
+    if (functor_) {
+      functor_(args...);
+    }
+  }
+
+private:
+  Functor functor_;
+};
+
+template <typename func_type> class signal {
+  template <typename func_type> struct slot_entry {
+  public:
+    slot_entry(object::ConnectionType type, pp::io::event_loop *_loop,
+               const slot<func_type> &_slot)
+        : connectionType(type), loop(_loop), slot(slot) {}
+
+    pp::io::event_loop *loop;
+    object::ConnectionType connectionType;
+    slot<func_type> slot;
+  };
+
+public:
+  signal() : threadId_(std::this_thread::get_id()) {}
+  std::thread::id threadId() { return threadId_; }
+
+  void appendSlot(object::ConnectionType type, pp::io::event_loop *loop,
+                  const slot<func_type> &_slot) {
+    slot_entry<func_type> entry{type, loop, _slot};
+    std::unique_lock<std::mutex> lock(mutex_);
+    slots_.push_back(entry);
+  }
+  template <typename... Args> void emit(Args... args) {
+    SlotList<func_type> tempSlots;
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      tempSlots = slots_;
+    }
+    for (auto &slotEntry : tempSlots) {
+      if (slotEntry.connectionType == object::ConnectionType::kAuto) {
+      }
+      slotEntry.slot.run(args...);
+    }
+  }
+
+private:
+  std::thread::id threadId_;
+  template <typename func_typr>
+  using SlotList = std::list<slot_entry<func_type>>;
+  SlotList<func_type> slots_;
+  std::mutex mutex_;
+};
+
+#endif // __SIGNAL_H_

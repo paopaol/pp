@@ -10,22 +10,14 @@
 #define NOTFOUND_FROM(map) map.end()
 namespace pp {
 namespace io {
-
     static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
-                                        errors::error_code& error)
-    {
-        auto hiocp = CreateIoCompletionPort(h, iocp, ptr, 0);
-        if (hiocp == NULL) {
-            int last_error = ::GetLastError();
-            error = hht_make_error_code(static_cast<std::errc>(last_error));
-            return NULL;
-        }
-        return hiocp;
-    }
+                                        errors::error_code& error);
+   static HANDLE iocp_create();
+   static void iocp_close(HANDLE h);
 
     iocp_poller::iocp_poller() : m_iocp(NULL)
     {
-        m_iocp = create();
+        m_iocp = iocp_create();
         assert(m_iocp != NULL);
         // FIXME: add log
     }
@@ -33,13 +25,8 @@ namespace io {
     iocp_poller::~iocp_poller()
     {
         assert(m_iocp != NULL);
-        ::CloseHandle(m_iocp);
+        iocp_close(m_iocp);
         // fixme: add log
-    }
-
-    HANDLE iocp_poller::create()
-    {
-        return CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
     }
 
     void iocp_poller::update_event_fd(event_fd*           _event,
@@ -122,6 +109,27 @@ namespace io {
 
         event_fd->handle_event();
         return 0;
+    }
+
+    static HANDLE iocp_associate_handle(HANDLE h, HANDLE iocp, DWORD_PTR ptr,
+                                        errors::error_code& error)
+    {
+        auto hiocp = CreateIoCompletionPort(h, iocp, ptr, 0);
+        if (hiocp == NULL) {
+            int last_error = ::GetLastError();
+            error = hht_make_error_code(static_cast<std::errc>(last_error));
+            return NULL;
+        }
+        return hiocp;
+    }
+    static void iocp_close(HANDLE h)
+    {
+      ::CloseHandle(h);
+    }
+
+    static HANDLE iocp_create()
+    {
+        return CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 1);
     }
 }  // namespace io
 }  // namespace pp

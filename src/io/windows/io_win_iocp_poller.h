@@ -41,7 +41,6 @@ namespace pp {
 
       iocp_poller_private *private_;
 
-      HANDLE create();
       //int updateEventFd(event_fd *event, errors::error_code &error);
 
 

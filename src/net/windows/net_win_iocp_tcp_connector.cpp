@@ -85,9 +85,9 @@ namespace net {
         if (error) {
             return -1;
         }
-        conn_fd_ = std::make_shared<io::iocp_event_fd>(loop_, fd);
-
-        auto evfd = static_cast<io::iocp_event_fd*>(conn_fd_.get());
+        auto evfd = std::make_shared<io::iocp_event_fd>(loop_, fd);
+        conn_fd_ = evfd;
+        //auto evfd = static_cast<io::iocp_event_fd*>(conn_fd_.get());
         static windows_connect_ex_initer ex_func_init(evfd->fd());
         evfd->tie(shared_from_this());
 

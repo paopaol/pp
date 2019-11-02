@@ -12,7 +12,7 @@ namespace io {
     class event_fd;
     class event_poller {
     public:
-        typedef std::function<int(int timeoutms, event_fd_list& gotEventFds,
+        typedef std::function<int(int timeoutms, event_fd_list& got_event_fds,
                                   errors::error_code& error)>
             poll_handler;
         typedef std::function<void(event_fd* event, errors::error_code& error)>
